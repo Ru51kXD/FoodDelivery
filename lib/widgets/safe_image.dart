@@ -51,12 +51,30 @@ class SafeImage extends StatelessWidget {
     }
 
     // Оптимизация - оптимальный размер для кеширования
-    // Уменьшаем размеры кеширования на эмуляторе для снижения нагрузки
-    final double scale = _isEmulator ? 0.5 : 1.0;
-    final int? memCacheWidth = width != null ? 
-        (width! * MediaQuery.of(context).devicePixelRatio * scale).ceil() : null;
-    final int? memCacheHeight = height != null ? 
-        (height! * MediaQuery.of(context).devicePixelRatio * scale).ceil() : null;
+    // Безопасно вычисляем размеры кеширования
+    int? memCacheWidth;
+    int? memCacheHeight;
+    
+    try {
+      final double scale = _isEmulator ? 0.5 : 1.0;
+      final double devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
+      
+      if (width != null && width!.isFinite) {
+        final double calculatedWidth = width! * devicePixelRatio * scale;
+        if (calculatedWidth.isFinite && calculatedWidth > 0) {
+          memCacheWidth = calculatedWidth.ceil();
+        }
+      }
+      
+      if (height != null && height!.isFinite) {
+        final double calculatedHeight = height! * devicePixelRatio * scale;
+        if (calculatedHeight.isFinite && calculatedHeight > 0) {
+          memCacheHeight = calculatedHeight.ceil();
+        }
+      }
+    } catch (e) {
+      print("Ошибка при вычислении размеров кеша: $e");
+    }
 
     try {
       return CachedNetworkImage(
@@ -123,6 +141,18 @@ class SafeImage extends StatelessWidget {
   // Упрощенный виджет для загрузки изображения при проблемах с OpenGL
   Widget _buildBasicImage(BuildContext context) {
     try {
+      // Безопасно вычисляем cacheWidth и cacheHeight
+      int? safeWidth;
+      int? safeHeight;
+      
+      if (width != null && width!.isFinite) {
+        safeWidth = width!.toInt();
+      }
+      
+      if (height != null && height!.isFinite) {
+        safeHeight = height!.toInt();
+      }
+      
       return Image.network(
         imageUrl,
         width: width,
@@ -135,8 +165,8 @@ class SafeImage extends StatelessWidget {
         },
         errorBuilder: (context, error, stackTrace) => _buildErrorWidget(),
         gaplessPlayback: true,
-        cacheWidth: width?.toInt() ?? 200,
-        cacheHeight: height?.toInt() ?? 200,
+        cacheWidth: safeWidth ?? 200,
+        cacheHeight: safeHeight ?? 200,
       );
     } catch (e) {
       print("Ошибка при базовой загрузке изображения: $e");
@@ -164,6 +194,12 @@ class SafeImage extends StatelessWidget {
   }
 
   Widget _buildErrorWidget() {
+    // Безопасный размер иконки
+    double safeIconSize = 20.0;
+    if (width != null && width!.isFinite) {
+      safeIconSize = width! / 3 < 60 ? width! / 3 : 20.0;
+    }
+    
     return errorWidget ?? 
       Container(
         width: width,
@@ -172,7 +208,7 @@ class SafeImage extends StatelessWidget {
         child: Icon(
           Icons.image_not_supported,
           color: Colors.grey[600],
-          size: (width ?? 60) / 3,
+          size: safeIconSize,
         ),
       );
   }

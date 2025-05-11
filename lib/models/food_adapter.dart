@@ -5,16 +5,20 @@ import '../models/food_item.dart' as FoodItemModel;
 class FoodAdapter {
   /// Конвертирует объект Food в FoodItem
   static FoodItemModel.FoodItem toFoodItem(FoodModel.Food food) {
+    // Безопасно получаем числовые значения
+    double safePrice = food.price.isFinite ? food.price : 0.0;
+    double safeRating = (food.rating != null && food.rating!.isFinite) ? food.rating! : 0.0;
+    
     return FoodItemModel.FoodItem(
       id: food.id,
       name: food.name,
       description: food.description,
-      price: food.price,
+      price: safePrice,
       imageUrl: food.imageUrl,
       category: food.categories.isNotEmpty ? food.categories[0] : '',
-      rating: food.rating ?? 0.0,
+      rating: safeRating,
       preparationTime: food.preparationTime ?? 30,
-      isPopular: food.rating != null && food.rating! >= 4.5,
+      isPopular: safeRating >= 4.5,
       isVegetarian: food.isVegetarian ?? false,
       ingredients: food.ingredients ?? [],
       restaurantId: food.restaurantId,
@@ -28,7 +32,7 @@ class FoodAdapter {
                 choices: option.choices.map((choice) => 
                   FoodItemModel.FoodOptionChoice(
                     name: choice.name,
-                    priceAdd: choice.priceAdd,
+                    priceAdd: _safeDouble(choice.priceAdd),
                   )
                 ).toList(),
                 required: option.required,
@@ -40,18 +44,30 @@ class FoodAdapter {
     );
   }
 
+  /// Безопасное получение double значения
+  static double _safeDouble(double value) {
+    if (value.isNaN || value.isInfinite) {
+      return 0.0;
+    }
+    return value;
+  }
+
   /// Конвертирует объект FoodItem в Food
   static FoodModel.Food toFood(FoodItemModel.FoodItem foodItem) {
+    // Безопасно получаем числовые значения
+    double safePrice = foodItem.price.isFinite ? foodItem.price : 0.0;
+    double? safeRating = (foodItem.rating.isFinite) ? foodItem.rating : null;
+    
     return FoodModel.Food(
       id: foodItem.id,
       name: foodItem.name,
       description: foodItem.description,
       imageUrl: foodItem.imageUrl,
-      price: foodItem.price,
+      price: safePrice,
       restaurantId: foodItem.restaurantId ?? '',
       categories: foodItem.categories ?? [foodItem.category],
       isAvailable: foodItem.isAvailable ?? true,
-      rating: foodItem.rating,
+      rating: safeRating,
       reviewCount: foodItem.reviewCount,
       isVegetarian: foodItem.isVegetarian,
       isSpicy: foodItem.isSpicy,
@@ -63,7 +79,7 @@ class FoodAdapter {
                 choices: option.choices.map((choice) => 
                   FoodModel.FoodOptionChoice(
                     name: choice.name,
-                    priceAdd: choice.priceAdd,
+                    priceAdd: _safeDouble(choice.priceAdd),
                   )
                 ).toList(),
                 required: option.required,

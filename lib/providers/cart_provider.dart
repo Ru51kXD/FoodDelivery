@@ -13,6 +13,7 @@ class CartProvider with ChangeNotifier {
   List<CartItem> _items = [];
   bool _isLoading = false;
   String? _error;
+  bool _dbAvailable = true; // Флаг доступности базы данных
   
   CartProvider() {
     _loadCart();
@@ -36,12 +37,33 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      _items = await _databaseService.getCartItems();
+      // Пробуем загрузить из базы данных с таймаутом
+      _items = await _loadCartWithTimeout();
     } catch (e) {
       _error = e.toString();
+      _dbAvailable = false;
+      print("Ошибка при загрузке корзины: $_error. Используем локальное хранилище.");
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+  
+  // Метод загрузки корзины с таймаутом
+  Future<List<CartItem>> _loadCartWithTimeout() async {
+    try {
+      return await Future.any([
+        _databaseService.getCartItems(),
+        Future.delayed(const Duration(seconds: 2), () {
+          // Если БД не ответила за 2 секунды, считаем её недоступной
+          _dbAvailable = false;
+          throw TimeoutException("Timeout loading cart from database");
+        })
+      ]);
+    } catch (e) {
+      _dbAvailable = false;
+      print("База данных недоступна: $e");
+      return [];
     }
   }
   
@@ -60,7 +82,22 @@ class CartProvider with ChangeNotifier {
         final existingItem = _items[existingItemIndex];
         final updatedItem = existingItem.copyWith(quantity: existingItem.quantity + quantity);
         _items[existingItemIndex] = updatedItem;
-        await _databaseService.updateCartItem(updatedItem);
+        
+        // Сохраняем в БД, если она доступна
+        if (_dbAvailable) {
+          try {
+            await _databaseService.updateCartItem(updatedItem).timeout(
+              const Duration(seconds: 2),
+              onTimeout: () {
+                _dbAvailable = false;
+                throw TimeoutException("Timeout updating cart item");
+              }
+            );
+          } catch (dbError) {
+            _dbAvailable = false;
+            print("Ошибка при обновлении элемента корзины в БД: $dbError. Продолжаем работу с локальными данными.");
+          }
+        }
       } else {
         // Если товара нет, создаем новый элемент корзины
         final newItem = CartItem(
@@ -69,10 +106,26 @@ class CartProvider with ChangeNotifier {
           quantity: quantity,
         );
         _items.add(newItem);
-        await _databaseService.insertCartItem(newItem);
+        
+        // Сохраняем в БД, если она доступна
+        if (_dbAvailable) {
+          try {
+            await _databaseService.insertCartItem(newItem).timeout(
+              const Duration(seconds: 2),
+              onTimeout: () {
+                _dbAvailable = false;
+                throw TimeoutException("Timeout inserting cart item");
+              }
+            );
+          } catch (dbError) {
+            _dbAvailable = false;
+            print("Ошибка при добавлении элемента корзины в БД: $dbError. Продолжаем работу с локальными данными.");
+          }
+        }
       }
     } catch (e) {
       _error = e.toString();
+      print("Общая ошибка при добавлении товара в корзину: $_error");
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -87,7 +140,22 @@ class CartProvider with ChangeNotifier {
 
     try {
       _items.removeWhere((item) => item.id == itemId);
-      await _databaseService.deleteCartItem(itemId);
+      
+      // Удаляем из БД, если она доступна
+      if (_dbAvailable) {
+        try {
+          await _databaseService.deleteCartItem(itemId).timeout(
+            const Duration(seconds: 2),
+            onTimeout: () {
+              _dbAvailable = false;
+              throw TimeoutException("Timeout deleting cart item");
+            }
+          );
+        } catch (dbError) {
+          _dbAvailable = false;
+          print("Ошибка при удалении элемента корзины из БД: $dbError. Продолжаем работу с локальными данными.");
+        }
+      }
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -112,7 +180,22 @@ class CartProvider with ChangeNotifier {
       if (itemIndex >= 0) {
         final updatedItem = _items[itemIndex].copyWith(quantity: quantity);
         _items[itemIndex] = updatedItem;
-        await _databaseService.updateCartItem(updatedItem);
+        
+        // Обновляем в БД, если она доступна
+        if (_dbAvailable) {
+          try {
+            await _databaseService.updateCartItem(updatedItem).timeout(
+              const Duration(seconds: 2),
+              onTimeout: () {
+                _dbAvailable = false;
+                throw TimeoutException("Timeout updating cart item quantity");
+              }
+            );
+          } catch (dbError) {
+            _dbAvailable = false;
+            print("Ошибка при обновлении количества в БД: $dbError. Продолжаем работу с локальными данными.");
+          }
+        }
       }
     } catch (e) {
       _error = e.toString();
@@ -130,7 +213,22 @@ class CartProvider with ChangeNotifier {
 
     try {
       _items.clear();
-      await _databaseService.clearCart();
+      
+      // Очищаем БД, если она доступна
+      if (_dbAvailable) {
+        try {
+          await _databaseService.clearCart().timeout(
+            const Duration(seconds: 2),
+            onTimeout: () {
+              _dbAvailable = false;
+              throw TimeoutException("Timeout clearing cart");
+            }
+          );
+        } catch (dbError) {
+          _dbAvailable = false;
+          print("Ошибка при очистке корзины в БД: $dbError. Продолжаем работу с локальными данными.");
+        }
+      }
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -179,4 +277,13 @@ class CartProvider with ChangeNotifier {
     );
     return item.quantity;
   }
+}
+
+// Исключение для таймаута
+class TimeoutException implements Exception {
+  final String message;
+  TimeoutException(this.message);
+  
+  @override
+  String toString() => message;
 } 

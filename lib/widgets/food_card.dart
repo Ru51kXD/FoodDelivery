@@ -86,7 +86,7 @@ class FoodCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '${foodItem.rating}',
+                      '${_safeDisplayValue(foodItem.rating)}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
@@ -94,7 +94,7 @@ class FoodCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      '(${foodItem.reviewCount})',
+                      '(${foodItem.reviewCount ?? 0})',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
@@ -125,7 +125,7 @@ class FoodCard extends StatelessWidget {
                       ),
                     Expanded(
                       child: Text(
-                        '${foodItem.price.toInt()} ₽',
+                        '${_safeIntPrice(foodItem.price)} ₽',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -141,6 +141,14 @@ class FoodCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // Безопасное преобразование цены в целое число
+  int _safeIntPrice(double price) {
+    if (price.isNaN || price.isInfinite) {
+      return 0;
+    }
+    return price.toInt();
   }
 
   Widget _buildGridCard(BuildContext context) {
@@ -175,96 +183,118 @@ class FoodCard extends StatelessWidget {
           ),
           
           // Содержимое
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  foodItem.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.star,
-                      size: 16,
-                      color: Colors.amber[700],
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    foodItem.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${foodItem.rating}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.star,
+                        size: 16,
+                        color: Colors.amber[700],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_safeDisplayValue(foodItem.rating)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '(${foodItem.reviewCount ?? 0})',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Expanded(
+                    child: Text(
+                      foodItem.description,
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '(${foodItem.reviewCount})',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  foodItem.description,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        if (foodItem.isVegetarian)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 4),
-                            child: Icon(
-                              Icons.eco,
-                              size: 16,
-                              color: Colors.green[600],
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          if (foodItem.isVegetarian)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 4),
+                              child: Icon(
+                                Icons.eco,
+                                size: 16,
+                                color: Colors.green[600],
+                              ),
                             ),
-                          ),
-                        if (foodItem.isSpicy ?? false)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 4),
-                            child: Icon(
-                              Icons.whatshot,
-                              size: 16,
-                              color: Colors.red[600],
+                          if (foodItem.isSpicy ?? false)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 4),
+                              child: Icon(
+                                Icons.whatshot,
+                                size: 16,
+                                color: Colors.red[600],
+                              ),
                             ),
-                          ),
-                      ],
-                    ),
-                    Text(
-                      '${foodItem.price.toInt()} ₽',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      Text(
+                        '${_safeIntPrice(foodItem.price)} ₽',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  // Безопасное преобразование значения для отображения
+  String _safeDisplayValue(dynamic value) {
+    if (value == null) {
+      return "0";
+    }
+    
+    if (value is num) {
+      if (value.isNaN || value.isInfinite) {
+        return "0";
+      }
+      return value.toStringAsFixed(1);
+    } else if (value is String) {
+      return value;
+    } else {
+      return "0";
+    }
   }
 } 

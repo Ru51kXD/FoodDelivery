@@ -5,33 +5,69 @@ import '../models/food.dart';
 import '../models/cart_item.dart';
 import '../models/user.dart';
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show Platform;
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
-  static Database? _database;
-  static Completer<Database>? _dbCompleter;
-
-  factory DatabaseService() => _instance;
-
+  
+  factory DatabaseService() {
+    return _instance;
+  }
+  
   DatabaseService._internal();
+  
+  Database? _db;
+  Completer<Database>? _dbCompleter;
+  bool _isDatabaseInitialized = false;
+  bool _isWindows = false;
+
+  // Проверка, запущено ли приложение на Windows
+  bool get isWindowsPlatform {
+    try {
+      _isWindows = !kIsWeb && Platform.isWindows;
+      return _isWindows;
+    } catch (e) {
+      // В случае ошибки, при запуске на Windows может не быть доступен Platform
+      print("Ошибка определения платформы: $e");
+      _isWindows = true;
+      return true;
+    }
+  }
 
   Future<Database> get database async {
-    if (_database != null) return _database!;
-    
-    // Используем Completer для предотвращения одновременной инициализации
-    if (_dbCompleter == null) {
-      _dbCompleter = Completer<Database>();
-      _initDatabase().then((db) {
-        _database = db;
-        _dbCompleter!.complete(db);
-      }).catchError((error) {
-        print("Database initialization error: $error");
-        _dbCompleter!.completeError(error);
-        _dbCompleter = null;
-      });
+    if (_db != null && _isDatabaseInitialized) {
+      return _db!;
     }
     
-    return _dbCompleter!.future;
+    if (isWindowsPlatform) {
+      print("Запуск на Windows платформе. Используем облегченный режим без базы данных.");
+      throw Exception("База данных не доступна на Windows в облегченном режиме");
+    }
+    
+    _db = await _initDatabase();
+    _isDatabaseInitialized = true;
+    return _db!;
+  }
+
+  // Проверяет, доступна ли база данных
+  Future<bool> isDatabaseAvailable() async {
+    try {
+      if (isWindowsPlatform) {
+        return false;
+      }
+      
+      // Пробуем выполнить простой запрос с таймаутом
+      final db = await _initDatabase();
+      await db.rawQuery('SELECT 1').timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => throw TimeoutException("Timeout initializing database")
+      );
+      return true;
+    } catch (e) {
+      print("База данных недоступна: $e");
+      return false;
+    }
   }
 
   Future<Database> _initDatabase() async {
@@ -632,10 +668,10 @@ class DatabaseService {
   // CLEANUP - Освобождение ресурсов БД при завершении работы
   Future<void> close() async {
     try {
-      final Database? db = _database;
+      final Database? db = _db;
       if (db != null) {
         await db.close();
-        _database = null;
+        _db = null;
         _dbCompleter = null;
         print("Database closed successfully");
       }

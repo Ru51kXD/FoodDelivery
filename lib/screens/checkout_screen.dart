@@ -7,6 +7,8 @@ import '../models/promo_code.dart';
 import '../services/loyalty_service.dart';
 import '../widgets/promo_code_input.dart';
 import 'order_success_screen.dart';
+import '../models/delivery_time_slot.dart';
+import 'package:intl/intl.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -21,13 +23,69 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _phoneController = TextEditingController();
   final _nameController = TextEditingController();
   final _loyaltyService = LoyaltyService();
+  final _commentController = TextEditingController();
+  final _promoController = TextEditingController();
   
-  String _selectedPaymentMethod = 'card';
+  String _selectedPaymentMethod = 'Наличные';
   bool _isProcessing = false;
   PromoCode? _appliedPromoCode;
   bool _useLoyaltyPoints = false;
   int _availablePoints = 0;
   int _pointsToUse = 0;
+  bool _isScheduledDelivery = false;
+  DateTime? _scheduledDate;
+  TimeOfDay? _scheduledTime;
+  DeliveryTimeSlot? _selectedTimeSlot;
+  bool _isPromoValid = false;
+  double _promoDiscount = 0.0;
+  
+  // Доступные временные слоты доставки
+  final List<DeliveryTimeSlot> _timeSlots = [
+    DeliveryTimeSlot(
+      id: '1',
+      startTime: TimeOfDay(hour: 10, minute: 0),
+      endTime: TimeOfDay(hour: 12, minute: 0),
+      isAvailable: true,
+    ),
+    DeliveryTimeSlot(
+      id: '2',
+      startTime: TimeOfDay(hour: 12, minute: 0),
+      endTime: TimeOfDay(hour: 14, minute: 0),
+      isAvailable: true,
+    ),
+    DeliveryTimeSlot(
+      id: '3',
+      startTime: TimeOfDay(hour: 14, minute: 0),
+      endTime: TimeOfDay(hour: 16, minute: 0),
+      isAvailable: true,
+    ),
+    DeliveryTimeSlot(
+      id: '4',
+      startTime: TimeOfDay(hour: 16, minute: 0),
+      endTime: TimeOfDay(hour: 18, minute: 0),
+      isAvailable: true,
+    ),
+    DeliveryTimeSlot(
+      id: '5',
+      startTime: TimeOfDay(hour: 18, minute: 0),
+      endTime: TimeOfDay(hour: 20, minute: 0),
+      isAvailable: true,
+    ),
+    DeliveryTimeSlot(
+      id: '6',
+      startTime: TimeOfDay(hour: 20, minute: 0),
+      endTime: TimeOfDay(hour: 22, minute: 0),
+      isAvailable: true,
+    ),
+  ];
+  
+  // Словарь промокодов
+  final Map<String, double> _promoCodes = {
+    'WELCOME': 10.0,
+    'SALE20': 20.0,
+    'FOOD50': 50.0,
+    'СКИДКА15': 15.0,
+  };
   
   @override
   void initState() {
@@ -49,6 +107,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _addressController.dispose();
     _phoneController.dispose();
     _nameController.dispose();
+    _commentController.dispose();
+    _promoController.dispose();
     super.dispose();
   }
 
@@ -139,9 +199,142 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return _getSubtotal() + _getDeliveryFee() + _getServiceFee() - _calculateDiscount();
   }
 
+  // Проверка промокода
+  void _checkPromoCode() {
+    final promoCode = _promoController.text.trim().toUpperCase();
+    
+    if (_promoCodes.containsKey(promoCode)) {
+      setState(() {
+        _isPromoValid = true;
+        _promoDiscount = _promoCodes[promoCode]!;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Промокод применен! Скидка: $_promoDiscount%'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      setState(() {
+        _isPromoValid = false;
+        _promoDiscount = 0.0;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Недействительный промокод'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+  
+  // Выбор даты доставки
+  Future<void> _selectDate() async {
+    final DateTime now = DateTime.now();
+    final DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _scheduledDate ?? now.add(const Duration(days: 1)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 14)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.deepOrange,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    
+    if (pickedDate != null) {
+      setState(() {
+        _scheduledDate = pickedDate;
+      });
+    }
+  }
+  
+  // Форматирование времени доставки
+  String _formatTimeSlot(DeliveryTimeSlot slot) {
+    return '${slot.startTime.hour}:${slot.startTime.minute.toString().padLeft(2, '0')} - '
+        '${slot.endTime.hour}:${slot.endTime.minute.toString().padLeft(2, '0')}';
+  }
+  
+  // Получение полной информации о доставке
+  String _getDeliveryInfo() {
+    if (!_isScheduledDelivery) {
+      return 'Как можно скорее';
+    }
+    
+    final dateStr = DateFormat('dd.MM.yyyy').format(_scheduledDate!);
+    final timeStr = _selectedTimeSlot != null 
+        ? _formatTimeSlot(_selectedTimeSlot!)
+        : 'Время не выбрано';
+        
+    return '$dateStr, $timeStr';
+  }
+  
+  // Расчет общей суммы заказа с учетом скидки
+  double _calculateTotal(double subtotal) {
+    final deliveryFee = 99.0;
+    double total = subtotal + deliveryFee;
+    
+    if (_isPromoValid) {
+      final discount = total * (_promoDiscount / 100);
+      total -= discount;
+    }
+    
+    return total;
+  }
+  
+  // Оформление заказа
+  void _placeOrder() {
+    if (_formKey.currentState!.validate()) {
+      // Здесь будет логика оформления заказа
+      setState(() {
+        _isProcessing = true;
+      });
+      
+      // Имитация задержки заказа
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() {
+            _isProcessing = false;
+          });
+          
+          // Очистка корзины
+          final cartProvider = Provider.of<CartProvider>(context, listen: false);
+          cartProvider.clearCart();
+          
+          // Показ сообщения об успешном заказе
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                _isScheduledDelivery
+                    ? 'Ваш заказ оформлен на ${_getDeliveryInfo()}'
+                    : 'Ваш заказ оформлен! Ожидайте доставку.',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+          
+          // Возврат на предыдущий экран
+          Navigator.pop(context);
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cartProvider = Provider.of<CartProvider>(context);
+    final subtotal = cartProvider.totalPrice;
+    final total = _calculateTotal(subtotal);
     
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -161,136 +354,329 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Контактная информация
-            Text(
-              'Контактная информация',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+      body: _isProcessing 
+          ? const Center(child: CircularProgressIndicator())
+          : Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // Контактная информация
+                  Text(
+                    'Контактная информация',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Имя
+                  _buildTextField(
+                    controller: _nameController,
+                    hintText: 'Ваше имя',
+                    prefixIcon: Icons.person_outline,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Пожалуйста, введите ваше имя';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Телефон
+                  _buildTextField(
+                    controller: _phoneController,
+                    hintText: 'Номер телефона',
+                    prefixIcon: Icons.phone_outlined,
+                    keyboardType: TextInputType.phone,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Пожалуйста, введите номер телефона';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Адрес доставки
+                  Text(
+                    'Адрес доставки',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Поле адреса
+                  _buildTextField(
+                    controller: _addressController,
+                    hintText: 'Укажите точный адрес доставки',
+                    prefixIcon: Icons.location_on_outlined,
+                    maxLines: 2,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Пожалуйста, введите адрес доставки';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Способ оплаты
+                  Text(
+                    'Способ оплаты',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Выбор способа оплаты
+                  _buildPaymentMethodSelector(),
+                  const SizedBox(height: 24),
+                  
+                  // Промокод
+                  PromoCodeInput(
+                    orderAmount: _getSubtotal(),
+                    onPromoCodeApplied: _handlePromoCodeApplied,
+                    onError: _handlePromoCodeError,
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Бонусные баллы
+                  if (_availablePoints > 0) _buildLoyaltyPointsSection(),
+                  const SizedBox(height: 24),
+                  
+                  // Информация о заказе
+                  Text(
+                    'Информация о заказе',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Итоговая информация
+                  _buildOrderInfoItem('Товары (${cartProvider.itemCount})', '${_getSubtotal().toStringAsFixed(0)} ₽'),
+                  _buildOrderInfoItem('Доставка', '${_getDeliveryFee().toStringAsFixed(0)} ₽'),
+                  _buildOrderInfoItem('Сервисный сбор', '${_getServiceFee().toStringAsFixed(0)} ₽'),
+                  
+                  // Скидки
+                  if (_calculateDiscount() > 0) ...[
+                    _buildOrderInfoItem(
+                      'Скидка',
+                      '-${_calculateDiscount().toStringAsFixed(0)} ₽',
+                      isDiscount: true,
+                    ),
+                  ],
+                  
+                  const Divider(height: 32),
+                  _buildOrderInfoItem(
+                    'Итого',
+                    '${_getTotal().toStringAsFixed(0)} ₽',
+                    isBold: true,
+                  ),
+                  const SizedBox(height: 40),
+                  
+                  // Время доставки
+                  _buildSectionTitle('Время доставки'),
+                  SwitchListTile(
+                    title: Text(
+                      'Запланировать доставку',
+                      style: GoogleFonts.poppins(),
+                    ),
+                    value: _isScheduledDelivery,
+                    onChanged: (value) {
+                      setState(() {
+                        _isScheduledDelivery = value;
+                        if (value && _scheduledDate == null) {
+                          _scheduledDate = DateTime.now().add(const Duration(days: 1));
+                        }
+                      });
+                    },
+                    activeColor: Colors.deepOrange,
+                  ),
+                  
+                  if (_isScheduledDelivery) ...[
+                    const SizedBox(height: 8),
+                    // Выбор даты
+                    ListTile(
+                      title: Text(
+                        'Дата доставки',
+                        style: GoogleFonts.poppins(),
+                      ),
+                      subtitle: Text(
+                        _scheduledDate != null 
+                            ? DateFormat('dd.MM.yyyy').format(_scheduledDate!)
+                            : 'Выберите дату',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      trailing: const Icon(Icons.calendar_today),
+                      onTap: _selectDate,
+                    ),
+                    
+                    const SizedBox(height: 8),
+                    
+                    // Заголовок временных слотов
+                    Text(
+                      'Выберите временной слот:',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 8),
+                    
+                    // Список временных слотов
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _timeSlots.map((slot) {
+                        final isSelected = _selectedTimeSlot?.id == slot.id;
+                        return ChoiceChip(
+                          label: Text(_formatTimeSlot(slot)),
+                          selected: isSelected,
+                          selectedColor: Colors.deepOrange,
+                          labelStyle: GoogleFonts.poppins(
+                            color: isSelected ? Colors.white : Colors.black,
+                          ),
+                          onSelected: slot.isAvailable ? (selected) {
+                            setState(() {
+                              _selectedTimeSlot = selected ? slot : null;
+                            });
+                          } : null,
+                          backgroundColor: slot.isAvailable 
+                              ? Colors.grey[200]
+                              : Colors.grey[300],
+                          disabledColor: Colors.grey[300],
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Способ оплаты
+                  _buildSectionTitle('Способ оплаты'),
+                  _buildPaymentMethodRadio('Наличные', 'Оплата наличными при получении'),
+                  _buildPaymentMethodRadio('Карта', 'Оплата картой при получении'),
+                  _buildPaymentMethodRadio('Онлайн', 'Онлайн-оплата картой'),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Промокод
+                  _buildSectionTitle('Промокод'),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _promoController,
+                          decoration: InputDecoration(
+                            hintText: 'Введите промокод',
+                            filled: true,
+                            fillColor: Colors.grey[100],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            suffixIcon: _isPromoValid
+                                ? const Icon(Icons.check_circle, color: Colors.green)
+                                : null,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: _checkPromoCode,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.deepOrange,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: Text(
+                          'Применить',
+                          style: GoogleFonts.poppins(),
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Комментарий к заказу
+                  _buildSectionTitle('Комментарий к заказу'),
+                  TextFormField(
+                    controller: _commentController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText: 'Комментарий к заказу (необязательно)',
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Итоговая сумма
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildPriceRow('Сумма заказа', '${subtotal.toStringAsFixed(0)} ₽'),
+                        _buildPriceRow('Доставка', '99 ₽'),
+                        if (_isPromoValid)
+                          _buildPriceRow(
+                            'Скидка',
+                            '- ${((subtotal + 99) * _promoDiscount / 100).toStringAsFixed(0)} ₽',
+                            valueColor: Colors.green,
+                          ),
+                        const Divider(),
+                        _buildPriceRow(
+                          'Итого',
+                          '${total.toStringAsFixed(0)} ₽',
+                          isBold: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 32),
+                  
+                  // Кнопка оформления заказа
+                  ElevatedButton(
+                    onPressed: _placeOrder,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepOrange,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Оформить заказ',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            
-            // Имя
-            _buildTextField(
-              controller: _nameController,
-              hintText: 'Ваше имя',
-              prefixIcon: Icons.person_outline,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Пожалуйста, введите ваше имя';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            
-            // Телефон
-            _buildTextField(
-              controller: _phoneController,
-              hintText: 'Номер телефона',
-              prefixIcon: Icons.phone_outlined,
-              keyboardType: TextInputType.phone,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Пожалуйста, введите номер телефона';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-            
-            // Адрес доставки
-            Text(
-              'Адрес доставки',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            // Поле адреса
-            _buildTextField(
-              controller: _addressController,
-              hintText: 'Укажите точный адрес доставки',
-              prefixIcon: Icons.location_on_outlined,
-              maxLines: 2,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Пожалуйста, введите адрес доставки';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-            
-            // Способ оплаты
-            Text(
-              'Способ оплаты',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            // Выбор способа оплаты
-            _buildPaymentMethodSelector(),
-            const SizedBox(height: 24),
-            
-            // Промокод
-            PromoCodeInput(
-              orderAmount: _getSubtotal(),
-              onPromoCodeApplied: _handlePromoCodeApplied,
-              onError: _handlePromoCodeError,
-            ),
-            const SizedBox(height: 16),
-            
-            // Бонусные баллы
-            if (_availablePoints > 0) _buildLoyaltyPointsSection(),
-            const SizedBox(height: 24),
-            
-            // Информация о заказе
-            Text(
-              'Информация о заказе',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            // Итоговая информация
-            _buildOrderInfoItem('Товары (${cartProvider.itemCount})', '${_getSubtotal().toStringAsFixed(0)} ₽'),
-            _buildOrderInfoItem('Доставка', '${_getDeliveryFee().toStringAsFixed(0)} ₽'),
-            _buildOrderInfoItem('Сервисный сбор', '${_getServiceFee().toStringAsFixed(0)} ₽'),
-            
-            // Скидки
-            if (_calculateDiscount() > 0) ...[
-              _buildOrderInfoItem(
-                'Скидка',
-                '-${_calculateDiscount().toStringAsFixed(0)} ₽',
-                isDiscount: true,
-              ),
-            ],
-            
-            const Divider(height: 32),
-            _buildOrderInfoItem(
-              'Итого',
-              '${_getTotal().toStringAsFixed(0)} ₽',
-              isBold: true,
-            ),
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
-      bottomNavigationBar: _buildBottomBar(context, _getTotal()),
     );
   }
 
@@ -503,62 +889,58 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
   
-  Widget _buildBottomBar(BuildContext context, double totalAmount) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, -5),
+  Widget _buildPaymentMethodRadio(String value, String title) {
+    return RadioListTile<String>(
+      title: Text(
+        title,
+        style: GoogleFonts.poppins(),
+      ),
+      value: value,
+      groupValue: _selectedPaymentMethod,
+      onChanged: (newValue) {
+        setState(() {
+          _selectedPaymentMethod = newValue!;
+        });
+      },
+      activeColor: Colors.deepOrange,
+    );
+  }
+  
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(
+        title,
+        style: GoogleFonts.poppins(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildPriceRow(String label, String value, {bool isBold = false, Color? valueColor}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: isBold ? 16 : 14,
+            ),
+          ),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: isBold ? 16 : 14,
+              color: valueColor,
+            ),
           ),
         ],
-      ),
-      child: SafeArea(
-        child: ElevatedButton(
-          onPressed: _isProcessing ? null : _processOrder,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.deepOrange,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            disabledBackgroundColor: Colors.grey[400],
-          ),
-          child: _isProcessing
-              ? Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        strokeWidth: 2,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Обработка заказа...',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                )
-              : Text(
-                  'Оплатить ${totalAmount.toStringAsFixed(0)} ₽',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-        ),
       ),
     );
   }

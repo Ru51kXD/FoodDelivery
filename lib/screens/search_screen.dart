@@ -24,7 +24,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   final TextEditingController _searchController = TextEditingController();
   final FoodProvider _foodProvider = FoodProvider();
   List<Restaurant> _searchResults = [];
-  List<Food> filteredFoods = [];
+  List<FoodItem> filteredFoods = [];
   List<Restaurant> filteredRestaurants = [];
   bool _isLoading = false;
   String? _error;
@@ -302,25 +302,138 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     );
   }
 
-  // Конвертирует объект Food в FoodItem
-  FoodItem _convertFoodToFoodItem(Food food) {
-    return FoodItem(
-      id: food.id,
-      name: food.name,
-      description: food.description,
-      price: food.price,
-      imageUrl: food.imageUrl,
-      category: food.categories.isNotEmpty ? food.categories[0] : '',
-      rating: food.rating ?? 0.0,
-      preparationTime: food.preparationTime ?? 0,
-      isPopular: false,
-      isVegetarian: food.isVegetarian ?? false,
-      ingredients: food.ingredients ?? [],
-      restaurantId: food.restaurantId,
-      categories: food.categories,
-      reviewCount: food.reviewCount ?? 0,
-      isSpicy: food.isSpicy ?? false,
-      isAvailable: food.isAvailable,
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'пицца':
+        return Icons.local_pizza;
+      case 'суши':
+        return Icons.set_meal;
+      case 'бургеры':
+        return Icons.fastfood;
+      case 'десерты':
+        return Icons.cake;
+      case 'напитки':
+        return Icons.local_drink;
+      case 'салаты':
+        return Icons.eco;
+      case 'супы':
+        return Icons.soup_kitchen;
+      case 'завтраки':
+        return Icons.free_breakfast;
+      default:
+        return Icons.restaurant;
+    }
+  }
+  
+  Widget _buildSearchResults(List<FoodItem> foods, List<Restaurant> restaurants) {
+    if (foods.isEmpty && restaurants.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off,
+              size: 72,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Ничего не найдено',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Попробуйте изменить запрос или фильтры',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          Container(
+            color: Colors.white,
+            child: TabBar(
+              controller: _tabController,
+              labelColor: Colors.deepOrange,
+              unselectedLabelColor: Colors.grey,
+              labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+              unselectedLabelStyle: GoogleFonts.poppins(),
+              indicatorColor: Colors.deepOrange,
+              tabs: [
+                Tab(text: 'Блюда (${foods.length})'),
+                Tab(text: 'Рестораны (${restaurants.length})'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // Вкладка с блюдами
+                foods.isEmpty
+                    ? Center(
+                        child: Text(
+                          'Блюда не найдены',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: foods.length,
+                        itemBuilder: (context, index) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: FoodCard(
+                              foodItem: foods[index],
+                              onTap: () => _navigateToFoodDetails(foods[index]),
+                            ),
+                          );
+                        },
+                      ),
+                
+                // Вкладка с ресторанами
+                restaurants.isEmpty
+                    ? Center(
+                        child: Text(
+                          'Рестораны не найдены',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: restaurants.length,
+                        itemBuilder: (context, index) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: RestaurantCard(
+                              restaurant: restaurants[index],
+                              onTap: () => _navigateToRestaurant(restaurants[index]),
+                            ),
+                          );
+                        },
+                      ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -332,7 +445,8 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       // Поиск блюд
       filteredFoods = foodProvider.searchFoodItems(_searchController.text)
           .where((food) => 
-              (_selectedCategories.isEmpty || food.categories.any((cat) => _selectedCategories.contains(cat))) &&
+              (_selectedCategories.isEmpty || 
+               (food.categories?.any((cat) => _selectedCategories.contains(cat)) ?? false)) &&
               food.price <= _maxPrice &&
               (!_onlyAvailable || food.isAvailable == true))
           .toList();
@@ -559,142 +673,6 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                 },
               );
             },
-          ),
-        ],
-      ),
-    );
-  }
-  
-  IconData _getCategoryIcon(String category) {
-    switch (category.toLowerCase()) {
-      case 'пицца':
-        return Icons.local_pizza;
-      case 'суши':
-        return Icons.set_meal;
-      case 'бургеры':
-        return Icons.fastfood;
-      case 'десерты':
-        return Icons.cake;
-      case 'напитки':
-        return Icons.local_drink;
-      case 'салаты':
-        return Icons.eco;
-      case 'супы':
-        return Icons.soup_kitchen;
-      case 'завтраки':
-        return Icons.free_breakfast;
-      default:
-        return Icons.restaurant;
-    }
-  }
-  
-  Widget _buildSearchResults(List<Food> foods, List<Restaurant> restaurants) {
-    if (foods.isEmpty && restaurants.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.search_off,
-              size: 72,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Ничего не найдено',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Попробуйте изменить запрос или фильтры',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        children: [
-          Container(
-            color: Colors.white,
-            child: TabBar(
-              controller: _tabController,
-              labelColor: Colors.deepOrange,
-              unselectedLabelColor: Colors.grey,
-              labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-              unselectedLabelStyle: GoogleFonts.poppins(),
-              indicatorColor: Colors.deepOrange,
-              tabs: [
-                Tab(text: 'Блюда (${foods.length})'),
-                Tab(text: 'Рестораны (${restaurants.length})'),
-              ],
-            ),
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // Вкладка с блюдами
-                foods.isEmpty
-                    ? Center(
-                        child: Text(
-                          'Блюда не найдены',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: foods.length,
-                        itemBuilder: (context, index) {
-                          final foodItem = _convertFoodToFoodItem(foods[index]);
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: FoodCard(
-                              foodItem: foodItem,
-                              onTap: () => _navigateToFoodDetails(foodItem),
-                            ),
-                          );
-                        },
-                      ),
-                
-                // Вкладка с ресторанами
-                restaurants.isEmpty
-                    ? Center(
-                        child: Text(
-                          'Рестораны не найдены',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: restaurants.length,
-                        itemBuilder: (context, index) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: RestaurantCard(
-                              restaurant: restaurants[index],
-                              onTap: () => _navigateToRestaurant(restaurants[index]),
-                            ),
-                          );
-                        },
-                      ),
-              ],
-            ),
           ),
         ],
       ),

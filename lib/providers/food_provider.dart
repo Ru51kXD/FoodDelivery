@@ -5,6 +5,8 @@ import '../models/restaurant.dart';
 import '../services/database_service.dart';
 import '../data/mock_data.dart';
 import 'package:sqflite/sqflite.dart';
+import '../models/food_item.dart';
+import '../models/food_adapter.dart';
 
 // Максимальное количество операций в батче
 const int _MAX_BATCH_OPERATIONS = 5;
@@ -429,6 +431,88 @@ class FoodProvider with ChangeNotifier {
       return [];
     }
   }
-  List<Food> getFoodItemsByRestaurant(String restaurantId) => getFoodsByRestaurant(restaurantId);
-  List<Food> searchFoodItems(String query) => searchFoods(query);
+  
+  // Исправленные методы с безопасной конвертацией типов
+  List<FoodItem> getFoodItemsByRestaurant(String restaurantId) {
+    try {
+      final foods = getFoodsByRestaurant(restaurantId);
+      return FoodAdapter.convertFoodList(foods);
+    } catch (e) {
+      print("Ошибка при получении блюд ресторана: $e");
+      return [];
+    }
+  }
+  
+  List<FoodItem> searchFoodItems(String query) {
+    try {
+      final foods = searchFoods(query);
+      return FoodAdapter.convertFoodList(foods);
+    } catch (e) {
+      print("Ошибка при поиске блюд: $e");
+      return [];
+    }
+  }
+
+  // Получение всех категорий блюд
+  List<String> getAllCategories() {
+    final Set<String> categories = {};
+    
+    for (final food in mockFoods) {
+      if (food.categories.isNotEmpty) {
+        categories.addAll(food.categories);
+      }
+    }
+    
+    return categories.toList()..sort();
+  }
+  
+  // Получение похожих блюд (той же категории)
+  List<Food> getSimilarFoods(String foodId, int limit) {
+    try {
+      // Находим текущее блюдо
+      final currentFood = getFoodById(foodId);
+      if (currentFood == null || currentFood.categories.isEmpty) {
+        return getRandomFoods(limit);
+      }
+      
+      // Находим блюда той же категории
+      final List<Food> similarFoods = mockFoods
+        .where((food) => 
+          food.id != foodId && 
+          food.categories.any((cat) => currentFood.categories.contains(cat))
+        )
+        .toList();
+      
+      // Если похожих блюд недостаточно, добавляем случайные
+      if (similarFoods.length < limit) {
+        final additionalFoods = mockFoods
+          .where((food) => 
+            food.id != foodId && 
+            !similarFoods.any((similar) => similar.id == food.id)
+          )
+          .take(limit - similarFoods.length)
+          .toList();
+        
+        similarFoods.addAll(additionalFoods);
+      }
+      
+      // Если блюд больше, чем нужно, ограничиваем
+      return similarFoods.take(limit).toList();
+    } catch (e) {
+      print("Ошибка при получении похожих блюд: $e");
+      return [];
+    }
+  }
+  
+  // Получение случайных блюд
+  List<Food> getRandomFoods(int limit) {
+    try {
+      final List<Food> allFoods = List.from(mockFoods);
+      allFoods.shuffle();
+      return allFoods.take(limit).toList();
+    } catch (e) {
+      print("Ошибка при получении случайных блюд: $e");
+      return [];
+    }
+  }
 } 
