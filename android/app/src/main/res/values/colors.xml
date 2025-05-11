@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Цвета для приложения -->
+    <color name="primary">#FF5722</color>
+    <color name="primary_dark">#E64A19</color>
+    <color name="primary_light">#FFCCBC</color>
+    <color name="accent">#FF9800</color>
+    <color name="primary_text">#212121</color>
+    <color name="secondary_text">#757575</color>
+    <color name="divider">#BDBDBD</color>
+
+    <!-- Цвет для сплэш-скрина -->
+    <color name="splash_background">#FF5722</color>
+    
+    <!-- Цвета для статус-бара -->
+    <color name="status_bar_color">@android:color/transparent</color>
+    <color name="navigation_bar_color">#FFFFFF</color>
+</resources> 

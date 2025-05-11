@@ -1,22 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:math' as math;
 
+import '../models/food.dart';
+import '../models/food_item.dart';
+import '../models/food_adapter.dart';
 import '../providers/food_provider.dart';
 import '../providers/cart_provider.dart';
-import '../models/food_item.dart';
 import '../models/restaurant.dart';
 import '../widgets/search_bar.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/restaurant_card.dart';
 import '../widgets/food_card.dart';
 import '../widgets/shimmer_loading.dart';
+import '../widgets/category_card.dart';
+import '../widgets/minimalist_food_card.dart';
+import '../widgets/minimalist_restaurant_card.dart';
 import 'cart_screen.dart';
 import 'profile_screen.dart';
 import 'restaurant_details_screen.dart';
 import 'food_details_screen.dart';
 import 'search_screen.dart';
+import '../providers/user_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,11 +38,17 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isScrolled = false;
+  String _searchQuery = '';
+  List<Restaurant> _filteredRestaurants = [];
+  List<Restaurant> _restaurants = [];
+  bool _isLoading = false;
+  String? _error;
   
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _loadRestaurants();
   }
   
   @override
@@ -100,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
         });
         break;
       case 3:
-        // Экран профиля
+        // Экран профиля - просто переходим напрямую без проверок загрузки
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const ProfileScreen()),
         );
@@ -119,12 +132,59 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
   
-  void _navigateToFoodDetails(FoodItem food) {
+  void _navigateToFoodDetails(dynamic food) {
+    String foodId;
+    
+    if (food is Food) {
+      foodId = food.id;
+    } else if (food is FoodItem) {
+      foodId = food.id;
+    } else {
+      // Если тип неизвестен, просто возвращаемся
+      return;
+    }
+    
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => FoodDetailsScreen(foodId: food.id),
+        builder: (_) => FoodDetailsScreen(foodId: foodId),
       ),
     );
+  }
+
+  void _filterBySearch(String query) {
+    setState(() {
+      _searchQuery = query;
+      if (query.isEmpty) {
+        _filteredRestaurants = _restaurants;
+      } else {
+        _filteredRestaurants = _restaurants.where((restaurant) {
+          final nameMatch = restaurant.name.toLowerCase().contains(query.toLowerCase());
+          final descriptionMatch = restaurant.description?.toLowerCase().contains(query.toLowerCase()) ?? false;
+          return nameMatch || descriptionMatch;
+        }).toList();
+      }
+    });
+  }
+
+  Future<void> _loadRestaurants() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final foodProvider = Provider.of<FoodProvider>(context, listen: false);
+      _restaurants = foodProvider.restaurants;
+      _filteredRestaurants = _restaurants;
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -206,11 +266,39 @@ class _HomeScreenState extends State<HomeScreen> {
               preferredSize: const Size.fromHeight(60),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: AppSearchBar(
-                  controller: _searchController,
-                  onSearch: (query) {
-                    // Реализация поиска
-                  },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 1,
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Поиск ресторанов и блюд',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                _filterBySearch('');
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onChanged: _filterBySearch,
+                  ),
                 ),
               ),
             ),
@@ -254,23 +342,30 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           
-          // Горизонтальный список ресторанов
+          // Горизонтальный список популярных ресторанов
           SliverToBoxAdapter(
             child: SizedBox(
-              height: 215,
+              height: 300,
               child: foodProvider.isLoading
                   ? _buildRestaurantShimmer()
-                  : ListView.builder(
-                      padding: const EdgeInsets.only(left: 16),
-                      scrollDirection: Axis.horizontal,
-                      itemCount: foodProvider.restaurants.length,
-                      itemBuilder: (context, index) {
-                        final restaurant = foodProvider.restaurants[index];
-                        return RestaurantCard(
-                          restaurant: restaurant,
-                          onTap: () => _navigateToRestaurant(restaurant),
-                        );
-                      },
+                  : Container(
+                      color: Colors.grey[100],
+                      child: ListView.builder(
+                        padding: const EdgeInsets.only(left: 16),
+                        scrollDirection: Axis.horizontal,
+                        itemCount: foodProvider.restaurants.length,
+                        itemBuilder: (context, index) {
+                          final restaurant = foodProvider.restaurants[index];
+                          return Container(
+                            width: 280,
+                            margin: const EdgeInsets.only(right: 16),
+                            child: MinimalistRestaurantCard(
+                              restaurant: restaurant,
+                              onTap: () => _navigateToRestaurant(restaurant),
+                            ),
+                          );
+                        },
+                      ),
                     ),
             ),
           ),
@@ -318,8 +413,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       itemCount: foodProvider.getPopularFoodItems().length,
                       itemBuilder: (context, index) {
                         final food = foodProvider.getPopularFoodItems()[index];
-                        return FoodCard(
-                          foodItem: food,
+                        return MinimalistFoodCard(
+                          food: food,
                           onTap: () => _navigateToFoodDetails(food),
                         );
                       },
@@ -366,7 +461,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   sliver: SliverGrid(
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      childAspectRatio: 0.7,
+                      childAspectRatio: 0.8,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
                     ),
@@ -379,13 +474,41 @@ class _HomeScreenState extends State<HomeScreen> {
                                 .where((r) => r.categories.contains(_selectedCategory))
                                 .toList();
                         
+                        // Проверяем наличие ресторанов
+                        if (restaurants.isEmpty) {
+                          return Container(
+                            color: Colors.grey[300],
+                            child: const Center(
+                              child: Text("Нет ресторанов"),
+                            ),
+                          );
+                        }
+                        
                         if (index >= restaurants.length) return null;
                         
                         final restaurant = restaurants[index];
-                        return RestaurantCard(
-                          restaurant: restaurant,
-                          isGrid: true,
-                          onTap: () => _navigateToRestaurant(restaurant),
+                        
+                        print("DEBUG: Rendering restaurant card for ${restaurant.name}");
+                        
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 5,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: MinimalistRestaurantCard(
+                              restaurant: restaurant,
+                              onTap: () => _navigateToRestaurant(restaurant),
+                            ),
+                          ),
                         );
                       },
                       childCount: _selectedCategory.isEmpty

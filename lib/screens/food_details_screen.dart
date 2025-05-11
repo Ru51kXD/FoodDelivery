@@ -5,11 +5,16 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:uuid/uuid.dart';
 
-import '../models/food_item.dart';
+import '../models/food.dart' as food_model;
+import '../models/food_item.dart' as food_item_model;
+import '../models/food_adapter.dart';
 import '../models/cart_item.dart';
+import '../models/selected_option.dart';
 import '../providers/food_provider.dart';
 import '../providers/cart_provider.dart';
 import 'cart_screen.dart';
+import '../widgets/food_card.dart';
+import '../widgets/safe_image.dart';
 
 class FoodDetailsScreen extends StatefulWidget {
   final String foodId;
@@ -28,12 +33,13 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
   bool _isAppBarCollapsed = false;
   int _quantity = 1;
   double _totalPrice = 0;
-  final Map<String, List<String>> _selectedOptions = {};
+  final Map<String, SelectedOption> _selectedOptions = {};
   String? _specialInstructions;
   bool _isAddingToCart = false;
   bool _isLoading = true;
-  FoodItem? _foodItem;
+  food_model.Food? _foodItem;
   final _uuid = const Uuid();
+  final TextEditingController _instructionsController = TextEditingController();
   
   @override
   void initState() {
@@ -49,11 +55,14 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
     
     try {
       final foodProvider = Provider.of<FoodProvider>(context, listen: false);
-      final foodItem = foodProvider.getFoodItemById(widget.foodId);
+      final food = foodProvider.getFoodById(widget.foodId);
       
-      if (foodItem != null) {
+      if (food != null) {
+        // Конвертируем Food в FoodItem для совместимости с экраном деталей
+        final foodItem = FoodAdapter.toFoodItem(food);
+        
         setState(() {
-          _foodItem = foodItem;
+          _foodItem = food;
           _calculateTotalPrice();
           _isLoading = false;
         });
@@ -79,6 +88,7 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _instructionsController.dispose();
     super.dispose();
   }
   
@@ -97,34 +107,52 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
   void _calculateTotalPrice() {
     if (_foodItem == null) return;
     
+    double basePrice = _foodItem!.price * _quantity;
     double optionsPrice = 0;
     
-    // Расчет цены с учетом выбранных опций
-    for (final entry in _selectedOptions.entries) {
-      final optionName = entry.key;
-      final selectedChoices = entry.value;
-      
-      final options = _foodItem!.options;
-      if (options == null || options.isEmpty) continue;
-      
-      final option = options.firstWhere(
-        (option) => option.name == optionName,
-        orElse: () => FoodOption(name: '', choices: []),
-      );
-      
-      for (final choiceName in selectedChoices) {
-        final choice = option.choices.firstWhere(
-          (choice) => choice.name == choiceName,
-          orElse: () => FoodOptionChoice(name: '', priceAdd: 0),
-        );
-        optionsPrice += choice.priceAdd;
+    for (var option in _selectedOptions.values) {
+      for (var choice in option.choices) {
+        optionsPrice += choice.price * _quantity;
       }
     }
     
-    // Обновляем итоговую цену
     setState(() {
-      _totalPrice = (_foodItem!.price + optionsPrice) * _quantity;
+      _totalPrice = basePrice + optionsPrice;
     });
+  }
+  
+  SelectedOption _getSelectedOption(String optionName) {
+    if (_selectedOptions.containsKey(optionName)) {
+      return _selectedOptions[optionName]!;
+    }
+    
+    if (_foodItem!.options == null || _foodItem!.options!.isEmpty) {
+      return SelectedOption(
+        name: optionName,
+        choices: [],
+      );
+    }
+    
+    final option = _foodItem!.options!.firstWhere(
+      (opt) => opt.name == optionName,
+      orElse: () => food_model.FoodOption(
+        name: optionName,
+        choices: [],
+      ),
+    );
+    
+    final selectedOption = SelectedOption(
+      name: optionName,
+      choices: option.choices.map((choice) {
+        return SelectedChoice(
+          name: choice.name,
+          price: choice.priceAdd,
+        );
+      }).toList(),
+    );
+    
+    _selectedOptions[optionName] = selectedOption;
+    return selectedOption;
   }
   
   void _increaseQuantity() {
@@ -150,21 +178,24 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
       // Получаем текущую опцию
       final option = _foodItem!.options!.firstWhere(
         (option) => option.name == optionName,
-        orElse: () => FoodOption(name: '', choices: []),
+        orElse: () => food_model.FoodOption(name: '', choices: []),
       );
       
       // Инициализируем список выбранных вариантов, если его еще нет
       if (!_selectedOptions.containsKey(optionName)) {
-        _selectedOptions[optionName] = [];
+        _selectedOptions[optionName] = SelectedOption(
+          name: optionName,
+          choices: [],
+        );
       }
       
-      final selectedChoices = _selectedOptions[optionName]!;
+      final selectedChoices = _selectedOptions[optionName]!.choices;
       
       // Проверяем, выбран ли уже этот вариант
-      if (selectedChoices.contains(choiceName)) {
+      if (selectedChoices.contains(SelectedChoice(name: choiceName, price: 0))) {
         // Если вариант уже выбран и не является обязательным, удаляем его
         if (!option.required || selectedChoices.length > 1) {
-          selectedChoices.remove(choiceName);
+          selectedChoices.removeWhere((c) => c.name == choiceName);
         }
       } else {
         // Если вариант не выбран, добавляем его
@@ -176,7 +207,7 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
         
         // Если не превышено максимальное количество вариантов, добавляем
         if (selectedChoices.length < option.maxChoices) {
-          selectedChoices.add(choiceName);
+          selectedChoices.add(SelectedChoice(name: choiceName, price: 0));
         }
       }
       
@@ -185,10 +216,9 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
     });
   }
   
-  Future<void> _addToCart() async {
+  void _addToCart() async {
     if (_foodItem == null) return;
     
-    // Устанавливаем флаг, что добавляем в корзину
     setState(() {
       _isAddingToCart = true;
     });
@@ -198,36 +228,7 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
       
       // Создаем список выбранных опций в формате для CartItem
-      final selectedOptions = _selectedOptions.entries.map((entry) {
-        final optionName = entry.key;
-        final selectedChoices = entry.value;
-        
-        if (_foodItem!.options == null || _foodItem!.options!.isEmpty) {
-          return SelectedOption(name: optionName, choices: []);
-        }
-        
-        final option = _foodItem!.options!.firstWhere(
-          (option) => option.name == optionName,
-          orElse: () => FoodOption(name: '', choices: []),
-        );
-        
-        final choices = selectedChoices.map((choiceName) {
-          final choice = option.choices.firstWhere(
-            (choice) => choice.name == choiceName,
-            orElse: () => FoodOptionChoice(name: '', priceAdd: 0),
-          );
-          
-          return SelectedChoice(
-            name: choiceName,
-            priceAdd: choice.priceAdd,
-          );
-        }).toList();
-        
-        return SelectedOption(
-          name: optionName,
-          choices: choices,
-        );
-      }).toList();
+      final selectedOptions = _selectedOptions.values.toList();
       
       // Добавляем товар в корзину
       await cartProvider.addToCart(
@@ -477,7 +478,7 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
                           ],
                         ),
                       ),
-                      if (_foodItem!.isVegetarian)
+                      if (_foodItem!.isVegetarian ?? false)
                         Padding(
                           padding: const EdgeInsets.only(left: 12),
                           child: Container(
@@ -593,71 +594,37 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          ...option.choices.map((choice) {
-                            final isSelected = _selectedOptions[option.name]?.contains(choice.name) ?? false;
-                            
-                            return GestureDetector(
-                              onTap: () {
-                                _toggleOption(option.name, choice.name);
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: isSelected ? Colors.deepOrange : Colors.grey[300]!,
-                                    width: isSelected ? 2 : 1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                  color: isSelected ? Colors.deepOrange.withOpacity(0.1) : Colors.white,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        choice.name,
-                                        style: TextStyle(
-                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          Wrap(
+                            spacing: 8,
+                            children: option.choices.map((choice) {
+                              final selectedOption = _getSelectedOption(option.name);
+                              final isSelected = selectedOption.choices.any(
+                                (c) => c.name == choice.name,
+                              );
+
+                              return ChoiceChip(
+                                label: Text(choice.name),
+                                selected: isSelected,
+                                onSelected: (selected) {
+                                  setState(() {
+                                    if (selected) {
+                                      selectedOption.choices.add(
+                                        SelectedChoice(
+                                          name: choice.name,
+                                          price: choice.priceAdd,
                                         ),
-                                      ),
-                                    ),
-                                    Row(
-                                      children: [
-                                        if (choice.priceAdd > 0)
-                                          Text(
-                                            '+${choice.priceAdd.toStringAsFixed(0)} ₽',
-                                            style: TextStyle(
-                                              color: isSelected ? Colors.deepOrange : Colors.grey[600],
-                                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                            ),
-                                          ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          width: 20,
-                                          height: 20,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                              color: isSelected ? Colors.deepOrange : Colors.grey[400]!,
-                                            ),
-                                            color: isSelected ? Colors.deepOrange : Colors.white,
-                                          ),
-                                          child: isSelected
-                                              ? const Icon(
-                                                  Icons.check,
-                                                  color: Colors.white,
-                                                  size: 14,
-                                                )
-                                              : null,
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }).toList(),
+                                      );
+                                    } else {
+                                      selectedOption.choices.removeWhere(
+                                        (c) => c.name == choice.name,
+                                      );
+                                    }
+                                    _calculateTotalPrice();
+                                  });
+                                },
+                              );
+                            }).toList(),
+                          ),
                           const SizedBox(height: 16),
                         ],
                       );
@@ -674,6 +641,7 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
                   ),
                   const SizedBox(height: 8),
                   TextField(
+                    controller: _instructionsController,
                     maxLines: 3,
                     decoration: InputDecoration(
                       hintText: 'Например: "Без лука" или "Средняя прожарка"',

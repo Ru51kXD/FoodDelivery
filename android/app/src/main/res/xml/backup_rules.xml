@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Exclude specific shared preferences that contain sensitive data -->
+    <exclude domain="sharedpref" path="app_preferences.xml"/>
+    <exclude domain="database" path="user_data.db"/>
+    
+    <!-- Including specific files and paths that can be backed up -->
+    <include domain="sharedpref" path="settings.xml"/>
+    <include domain="file" path="images"/>
+    <include domain="database" path="food_delivery.db"/>
+    
+    <!-- Exclude cache folders -->
+    <exclude domain="external" path="cached_images"/>
+    <exclude domain="file" path="cache"/>
+</full-backup-content> 

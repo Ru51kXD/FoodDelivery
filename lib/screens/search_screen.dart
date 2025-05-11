@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../providers/food_provider.dart';
 import '../models/food_item.dart';
 import '../models/restaurant.dart';
+import '../models/food.dart';
 import '../widgets/food_card.dart';
 import '../widgets/restaurant_card.dart';
 import '../widgets/shimmer_loading.dart';
@@ -21,10 +22,14 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
+  final FoodProvider _foodProvider = FoodProvider();
+  List<Restaurant> _searchResults = [];
+  List<Food> filteredFoods = [];
+  List<Restaurant> filteredRestaurants = [];
+  bool _isLoading = false;
+  String? _error;
   late TabController _tabController;
   bool _showClearButton = false;
-  bool _isLoading = false;
   
   // Фильтры
   double _maxPrice = 2000;
@@ -47,7 +52,6 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     _searchController.addListener(() {
       setState(() {
         _showClearButton = _searchController.text.isNotEmpty;
-        _searchQuery = _searchController.text;
       });
     });
     
@@ -225,7 +229,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                         child: ElevatedButton(
                           onPressed: () {
                             Navigator.pop(context);
-                            _performSearch(_searchQuery);
+                            _performSearch(_searchController.text);
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.deepOrange,
@@ -254,18 +258,32 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     );
   }
 
-  void _performSearch(String query) {
-    setState(() {
-      _isLoading = true;
-    });
-    
-    // Имитация задержки загрузки для лучшего UX
-    Future.delayed(const Duration(milliseconds: 500), () {
+  Future<void> _performSearch(String query) async {
+    if (query.isEmpty) {
       setState(() {
-        _searchQuery = query;
+        _searchResults = [];
         _isLoading = false;
       });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
     });
+
+    try {
+      final results = await _foodProvider.searchRestaurants(query);
+      setState(() {
+        _searchResults = results;
+        _isLoading = false;
+      });
+    } catch (error) {
+      setState(() {
+        _isLoading = false;
+        _error = error.toString();
+      });
+    }
   }
 
   void _navigateToFoodDetails(FoodItem food) {
@@ -284,25 +302,43 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     );
   }
 
+  // Конвертирует объект Food в FoodItem
+  FoodItem _convertFoodToFoodItem(Food food) {
+    return FoodItem(
+      id: food.id,
+      name: food.name,
+      description: food.description,
+      price: food.price,
+      imageUrl: food.imageUrl,
+      category: food.categories.isNotEmpty ? food.categories[0] : '',
+      rating: food.rating ?? 0.0,
+      preparationTime: food.preparationTime ?? 0,
+      isPopular: false,
+      isVegetarian: food.isVegetarian ?? false,
+      ingredients: food.ingredients ?? [],
+      restaurantId: food.restaurantId,
+      categories: food.categories,
+      reviewCount: food.reviewCount ?? 0,
+      isSpicy: food.isSpicy ?? false,
+      isAvailable: food.isAvailable,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final foodProvider = Provider.of<FoodProvider>(context);
     
-    // Фильтруем результаты
-    List<FoodItem> filteredFoods = [];
-    List<Restaurant> filteredRestaurants = [];
-    
-    if (_searchQuery.isNotEmpty) {
+    if (_searchController.text.isNotEmpty) {
       // Поиск блюд
-      filteredFoods = foodProvider.searchFoodItems(_searchQuery)
+      filteredFoods = foodProvider.searchFoodItems(_searchController.text)
           .where((food) => 
-              (_selectedCategories.isEmpty || _selectedCategories.contains(food.category)) &&
+              (_selectedCategories.isEmpty || food.categories.any((cat) => _selectedCategories.contains(cat))) &&
               food.price <= _maxPrice &&
               (!_onlyAvailable || food.isAvailable == true))
           .toList();
       
       // Поиск ресторанов
-      filteredRestaurants = foodProvider.searchRestaurants(_searchQuery)
+      filteredRestaurants = _searchResults
           .where((restaurant) => 
               (_selectedCategories.isEmpty || 
                restaurant.categories.any((c) => _selectedCategories.contains(c))) &&
@@ -377,7 +413,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       ),
       body: _isLoading
           ? _buildLoadingState()
-          : _searchQuery.isEmpty
+          : _searchController.text.isEmpty
               ? _buildInitialSearchState()
               : _buildSearchResults(filteredFoods, filteredRestaurants),
     );
@@ -552,7 +588,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     }
   }
   
-  Widget _buildSearchResults(List<FoodItem> foods, List<Restaurant> restaurants) {
+  Widget _buildSearchResults(List<Food> foods, List<Restaurant> restaurants) {
     if (foods.isEmpty && restaurants.isEmpty) {
       return Center(
         child: Column(
@@ -578,7 +614,6 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                 fontSize: 14,
                 color: Colors.grey[600],
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -623,11 +658,12 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                         padding: const EdgeInsets.all(16),
                         itemCount: foods.length,
                         itemBuilder: (context, index) {
+                          final foodItem = _convertFoodToFoodItem(foods[index]);
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 16),
                             child: FoodCard(
-                              foodItem: foods[index],
-                              onTap: () => _navigateToFoodDetails(foods[index]),
+                              foodItem: foodItem,
+                              onTap: () => _navigateToFoodDetails(foodItem),
                             ),
                           );
                         },

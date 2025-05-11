@@ -6,12 +6,14 @@ class OrderSuccessScreen extends StatelessWidget {
   final String deliveryAddress;
   final String customerName;
   final String? orderId;
+  final String? courierId;
 
   const OrderSuccessScreen({
     super.key,
     required this.deliveryAddress,
     required this.customerName,
     this.orderId,
+    this.courierId,
   });
 
   @override
@@ -122,12 +124,12 @@ class OrderSuccessScreen extends StatelessWidget {
                   OutlinedButton(
                     onPressed: () {
                       // Переход к отслеживанию заказа
-                      Navigator.push(
+                      Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
                           builder: (context) => OrderTrackingScreen(
-                            orderId: orderNumber,
-                            deliveryAddress: deliveryAddress,
+                            orderId: orderId ?? '',
+                            courierId: courierId ?? '',
                           ),
                         ),
                       );

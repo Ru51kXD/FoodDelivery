@@ -1,412 +1,486 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:async';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../models/courier.dart' as courier_model;
+import '../models/courier_message.dart';
+import '../models/order.dart';
+import '../services/courier_service.dart';
 
 class OrderTrackingScreen extends StatefulWidget {
   final String orderId;
-  final String deliveryAddress;
-  
+  final String courierId;
+
   const OrderTrackingScreen({
-    super.key,
+    Key? key,
     required this.orderId,
-    required this.deliveryAddress,
-  });
+    required this.courierId,
+  }) : super(key: key);
 
   @override
   State<OrderTrackingScreen> createState() => _OrderTrackingScreenState();
 }
 
 class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
-  final List<OrderStatus> _orderStatuses = [
-    OrderStatus(
-      title: 'Заказ принят',
-      description: 'Мы получили ваш заказ',
-      icon: Icons.receipt_long_outlined,
-      completed: true,
-    ),
-    OrderStatus(
-      title: 'Приготовление',
-      description: 'Ваш заказ готовится на кухне',
-      icon: Icons.restaurant_outlined,
-      completed: true,
-    ),
-    OrderStatus(
-      title: 'В пути',
-      description: 'Курьер забрал заказ и направляется к вам',
-      icon: Icons.delivery_dining_outlined,
-      completed: false,
-    ),
-    OrderStatus(
-      title: 'Доставлен',
-      description: 'Заказ доставлен и получен',
-      icon: Icons.check_circle_outline,
-      completed: false,
-    ),
-  ];
-
-  late Timer _timer;
-  int _currentStatusIndex = 1; // начинаем с этапа "Приготовление"
-  int _deliveryTimeInMinutes = 35;
+  GoogleMapController? _mapController;
+  Set<Marker> _markers = {};
+  Set<Polyline> _polylines = {};
+  final CourierService _courierService = CourierService();
+  final _messageController = TextEditingController();
+  final _scrollController = ScrollController();
   
+  courier_model.Courier? _courier;
+  List<courier_model.CourierMessage> _messages = [];
+  Duration? _estimatedTime;
+  bool _isRatingDialogOpen = false;
+
   @override
   void initState() {
     super.initState();
-    // Имитация изменения статуса заказа каждые 15 секунд
-    _timer = Timer.periodic(const Duration(seconds: 15), (timer) {
-      if (_currentStatusIndex < _orderStatuses.length - 1) {
-        setState(() {
-          _currentStatusIndex++;
-          _orderStatuses[_currentStatusIndex].completed = true;
-          
-          // Уменьшаем оставшееся время доставки
-          if (_deliveryTimeInMinutes > 10) {
-            _deliveryTimeInMinutes -= 5;
-          }
-        });
-      } else {
-        _timer.cancel();
-      }
-    });
-  }
-  
-  @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
+    _initializeMap();
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: Text(
-          'Отслеживание заказа',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
+  void dispose() {
+    _messageController.dispose();
+    _scrollController.dispose();
+    _mapController?.dispose();
+    super.dispose();
+  }
+
+  void _initializeMap() async {
+    final route = await _courierService.getCourierRoute(widget.orderId);
+    _updateMapRoute(route);
+    
+    _courierService.trackCourierLocation(widget.courierId).listen((location) {
+      _updateCourierLocation(location);
+    });
+  }
+
+  void _updateMapRoute(List<LatLng> route) {
+    setState(() {
+      _polylines = {
+        Polyline(
+          polylineId: const PolylineId('route'),
+          points: route,
+          color: Colors.blue,
+          width: 5,
+        ),
+      };
+    });
+  }
+
+  void _updateCourierLocation(LatLng location) {
+    setState(() {
+      _markers = {
+        Marker(
+          markerId: const MarkerId('courier'),
+          position: location,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+          infoWindow: InfoWindow(
+            title: 'Курьер',
+            snippet: 'В пути',
           ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+        Marker(
+          markerId: const MarkerId('destination'),
+          position: _markers.firstWhere((m) => m.markerId.value == 'destination').position,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          infoWindow: const InfoWindow(
+            title: 'Пункт назначения',
+          ),
         ),
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Информация о заказе
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 5,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Номер заказа
-                  Text(
-                    'Заказ ${widget.orderId}',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // Время доставки
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.access_time,
-                        size: 16,
-                        color: Colors.deepOrange,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Ожидаемое время доставки: $_deliveryTimeInMinutes мин',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // Адрес доставки
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on_outlined,
-                        size: 16,
-                        color: Colors.deepOrange,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          widget.deliveryAddress,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: Colors.grey[700],
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+      };
+    });
+
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLng(location),
+    );
+  }
+
+  void _updateMarkers(LatLng courierLocation, LatLng destination) {
+    setState(() {
+      _markers = {
+        Marker(
+          markerId: const MarkerId('courier'),
+          position: courierLocation,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+          infoWindow: InfoWindow(
+            title: 'Курьер',
+            snippet: 'В пути',
+          ),
+        ),
+        Marker(
+          markerId: const MarkerId('destination'),
+          position: destination,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          infoWindow: const InfoWindow(
+            title: 'Пункт назначения',
+          ),
+        ),
+      };
+    });
+  }
+
+  void _sendMessage() {
+    if (_messageController.text.trim().isEmpty) return;
+
+    final message = courier_model.CourierMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      orderId: widget.orderId,
+      senderId: 'user1',
+      sender: courier_model.MessageSender.user,
+      text: _messageController.text.trim(),
+      timestamp: DateTime.now(),
+    );
+
+    _courierService.sendMessage(widget.orderId, message.text);
+    setState(() {
+      _messages.add(message);
+    });
+    _messageController.clear();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  void _showRatingDialog() {
+    if (_isRatingDialogOpen) return;
+    _isRatingDialogOpen = true;
+
+    double rating = 5.0;
+    final commentController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(
+            'Оцените курьера',
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.bold,
             ),
-            
-            // Карта доставки (имитация)
-            Container(
-              height: 200,
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(16),
-                image: const DecorationImage(
-                  image: NetworkImage(
-                    'https://t4.ftcdn.net/jpg/03/32/80/33/240_F_332803324_Agcc94hAzkrPMwfCfpAzLZfkZiTw4IFm.jpg'
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  return IconButton(
+                    icon: Icon(
+                      index < rating ? Icons.star : Icons.star_border,
+                      color: Colors.amber,
+                      size: 32,
+                    ),
+                    onPressed: () {
+                      setState(() => rating = index + 1.0);
+                    },
+                  );
+                }),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: commentController,
+                decoration: InputDecoration(
+                  hintText: 'Комментарий (необязательно)',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  fit: BoxFit.cover,
                 ),
+                maxLines: 3,
               ),
-              child: Stack(
-                children: [
-                  // Индикатор "в пути"
-                  if (_orderStatuses[2].completed && !_orderStatuses[3].completed)
-                    const Positioned(
-                      top: 80,
-                      left: 120,
-                      child: Icon(
-                        Icons.delivery_dining,
-                        color: Colors.deepOrange,
-                        size: 40,
-                      ),
-                    ),
-                  
-                  const Positioned(
-                    bottom: 20,
-                    right: 20,
-                    child: Icon(
-                      Icons.location_on,
-                      color: Colors.red,
-                      size: 30,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Статус-бар заказа
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Статус заказа',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            
-            // Список статусов
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _orderStatuses.length,
-              itemBuilder: (context, index) {
-                return _buildStatusItem(
-                  _orderStatuses[index],
-                  index,
-                  isLast: index == _orderStatuses.length - 1,
-                  isActive: index == _currentStatusIndex,
-                );
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _isRatingDialogOpen = false;
               },
-            ),
-            
-            const SizedBox(height: 20),
-            
-            // Контакт с курьером (появляется только если заказ в пути)
-            if (_orderStatuses[2].completed && !_orderStatuses[3].completed)
-              Container(
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
-                      spreadRadius: 1,
-                      blurRadius: 5,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            image: DecorationImage(
-                              image: NetworkImage(
-                                'https://i.pravatar.cc/150?img=65'
-                              ),
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Иван К.',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              'Ваш курьер',
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Spacer(),
-                        Row(
-                          children: [
-                            IconButton(
-                              onPressed: () {
-                                // Функция звонка курьеру
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Звонок курьеру...'),
-                                  ),
-                                );
-                              },
-                              icon: const Icon(
-                                Icons.phone,
-                                color: Colors.deepOrange,
-                              ),
-                            ),
-                            IconButton(
-                              onPressed: () {
-                                // Функция сообщения курьеру
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Сообщение курьеру...'),
-                                  ),
-                                );
-                              },
-                              icon: const Icon(
-                                Icons.message,
-                                color: Colors.deepOrange,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
+              child: Text(
+                'Отмена',
+                style: GoogleFonts.poppins(
+                  color: Colors.grey[600],
                 ),
               ),
-              
-            const SizedBox(height: 40),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await _courierService.rateCourier(
+                  widget.courierId,
+                  rating,
+                  commentController.text.trim(),
+                );
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  _isRatingDialogOpen = false;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Спасибо за вашу оценку!',
+                        style: GoogleFonts.poppins(),
+                      ),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepOrange,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'Отправить',
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
-  
-  Widget _buildStatusItem(OrderStatus status, int index, {bool isLast = false, bool isActive = false}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isActive ? Colors.orange.withOpacity(0.1) : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Индикатор статуса
-          Column(
-            children: [
-              Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: status.completed ? Colors.deepOrange : Colors.grey[300],
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  status.icon,
-                  color: status.completed ? Colors.white : Colors.grey[500],
-                  size: 16,
-                ),
-              ),
-              if (!isLast)
-                Container(
-                  width: 2,
-                  height: 30,
-                  color: status.completed ? Colors.deepOrange : Colors.grey[300],
-                ),
-            ],
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Отслеживание заказа',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
           ),
-          
-          const SizedBox(width: 16),
-          
-          // Информация о статусе
+        ),
+        actions: [
+          if (_courier != null)
+            IconButton(
+              icon: const Icon(Icons.star_outline),
+              onPressed: _showRatingDialog,
+            ),
+        ],
+      ),
+      body: Column(
+        children: [
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 5),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    status.title,
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: status.completed ? Colors.black : Colors.grey[700],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    status.description,
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: const LatLng(55.7558, 37.6173),
+                zoom: 15,
+              ),
+              markers: _markers,
+              polylines: _polylines,
+              onMapCreated: (controller) {
+                _mapController = controller;
+              },
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                if (_courier != null) ...[
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundImage: _courier!.avatarUrl != null
+                            ? NetworkImage(_courier!.avatarUrl!)
+                            : null,
+                        child: _courier!.avatarUrl == null
+                            ? Text(
+                                _courier!.name.substring(0, 1).toUpperCase(),
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _courier!.name,
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              '${_courier!.vehicleType} ${_courier!.vehicleNumber}',
+                              style: GoogleFonts.poppins(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.phone),
+                        color: Colors.deepOrange,
+                        onPressed: () {
+                          // TODO: Реализовать звонок курьеру
+                        },
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.star,
+                        color: Colors.amber,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _courier!.rating.toStringAsFixed(1),
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '•',
+                        style: GoogleFonts.poppins(
+                          color: Colors.grey[400],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${_courier!.completedDeliveries} доставок',
+                        style: GoogleFonts.poppins(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (_estimatedTime != null) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        color: Colors.deepOrange,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Примерное время доставки: ${_estimatedTime!.inMinutes} мин',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Expanded(
+            flex: 1,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    offset: const Offset(0, -2),
+                    blurRadius: 10,
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final message = _messages[index];
+                        final isUser = message.sender == courier_model.MessageSender.user;
+
+                        return Align(
+                          alignment: isUser
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isUser
+                                  ? Colors.deepOrange
+                                  : Colors.grey[200],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              message.text,
+                              style: GoogleFonts.poppins(
+                                color: isUser ? Colors.white : Colors.black,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          offset: const Offset(0, -2),
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _messageController,
+                            decoration: InputDecoration(
+                              hintText: 'Написать сообщение...',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: BorderSide.none,
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey[100],
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.send),
+                          color: Colors.deepOrange,
+                          onPressed: _sendMessage,
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -415,18 +489,4 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
       ),
     );
   }
-}
-
-class OrderStatus {
-  final String title;
-  final String description;
-  final IconData icon;
-  bool completed;
-  
-  OrderStatus({
-    required this.title,
-    required this.description,
-    required this.icon,
-    required this.completed,
-  });
 } 

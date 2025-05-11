@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../providers/cart_provider.dart';
+import '../models/promo_code.dart';
+import '../services/loyalty_service.dart';
+import '../widgets/promo_code_input.dart';
 import 'order_success_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
@@ -17,9 +20,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _addressController = TextEditingController();
   final _phoneController = TextEditingController();
   final _nameController = TextEditingController();
+  final _loyaltyService = LoyaltyService();
   
   String _selectedPaymentMethod = 'card';
   bool _isProcessing = false;
+  PromoCode? _appliedPromoCode;
+  bool _useLoyaltyPoints = false;
+  int _availablePoints = 0;
+  int _pointsToUse = 0;
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadLoyaltyPoints();
+  }
+
+  Future<void> _loadLoyaltyPoints() async {
+    // TODO: Заменить на реальный ID пользователя
+    const userId = 'user123';
+    final loyaltyProgram = await _loyaltyService.getUserLoyaltyProgram(userId);
+    setState(() {
+      _availablePoints = loyaltyProgram.points;
+    });
+  }
   
   @override
   void dispose() {
@@ -27,6 +50,33 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _phoneController.dispose();
     _nameController.dispose();
     super.dispose();
+  }
+
+  void _handlePromoCodeApplied(PromoCode? promoCode) {
+    setState(() {
+      _appliedPromoCode = promoCode;
+    });
+  }
+
+  void _handlePromoCodeError(String error) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(error)),
+    );
+  }
+
+  void _toggleLoyaltyPoints(bool? value) {
+    setState(() {
+      _useLoyaltyPoints = value ?? false;
+      if (!_useLoyaltyPoints) {
+        _pointsToUse = 0;
+      }
+    });
+  }
+
+  void _updatePointsToUse(int points) {
+    setState(() {
+      _pointsToUse = points;
+    });
   }
   
   void _processOrder() async {
@@ -56,10 +106,42 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
+  double _calculateDiscount() {
+    double discount = 0;
+    
+    // Скидка по промокоду
+    if (_appliedPromoCode != null) {
+      discount += _appliedPromoCode!.calculateDiscount(_getSubtotal());
+    }
+    
+    // Скидка по бонусным баллам (1 балл = 1 рубль)
+    if (_useLoyaltyPoints && _pointsToUse > 0) {
+      discount += _pointsToUse.toDouble();
+    }
+    
+    return discount;
+  }
+
+  double _getSubtotal() {
+    final cartProvider = Provider.of<CartProvider>(context);
+    return cartProvider.totalPrice;
+  }
+
+  double _getDeliveryFee() {
+    return 150.0;
+  }
+
+  double _getServiceFee() {
+    return 50.0;
+  }
+
+  double _getTotal() {
+    return _getSubtotal() + _getDeliveryFee() + _getServiceFee() - _calculateDiscount();
+  }
+
   @override
   Widget build(BuildContext context) {
     final cartProvider = Provider.of<CartProvider>(context);
-    final totalAmount = cartProvider.totalPrice + 200; // 200 = доставка + сбор
     
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -162,6 +244,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             _buildPaymentMethodSelector(),
             const SizedBox(height: 24),
             
+            // Промокод
+            PromoCodeInput(
+              orderAmount: _getSubtotal(),
+              onPromoCodeApplied: _handlePromoCodeApplied,
+              onError: _handlePromoCodeError,
+            ),
+            const SizedBox(height: 16),
+            
+            // Бонусные баллы
+            if (_availablePoints > 0) _buildLoyaltyPointsSection(),
+            const SizedBox(height: 24),
+            
             // Информация о заказе
             Text(
               'Информация о заказе',
@@ -173,20 +267,91 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const SizedBox(height: 16),
             
             // Итоговая информация
-            _buildOrderInfoItem('Товары (${cartProvider.itemCount})', '${cartProvider.totalPrice.toStringAsFixed(0)} ₽'),
-            _buildOrderInfoItem('Доставка', '150 ₽'),
-            _buildOrderInfoItem('Сервисный сбор', '50 ₽'),
+            _buildOrderInfoItem('Товары (${cartProvider.itemCount})', '${_getSubtotal().toStringAsFixed(0)} ₽'),
+            _buildOrderInfoItem('Доставка', '${_getDeliveryFee().toStringAsFixed(0)} ₽'),
+            _buildOrderInfoItem('Сервисный сбор', '${_getServiceFee().toStringAsFixed(0)} ₽'),
+            
+            // Скидки
+            if (_calculateDiscount() > 0) ...[
+              _buildOrderInfoItem(
+                'Скидка',
+                '-${_calculateDiscount().toStringAsFixed(0)} ₽',
+                isDiscount: true,
+              ),
+            ],
+            
             const Divider(height: 32),
             _buildOrderInfoItem(
               'Итого',
-              '${totalAmount.toStringAsFixed(0)} ₽',
+              '${_getTotal().toStringAsFixed(0)} ₽',
               isBold: true,
             ),
             const SizedBox(height: 40),
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomBar(context, totalAmount),
+      bottomNavigationBar: _buildBottomBar(context, _getTotal()),
+    );
+  }
+
+  Widget _buildLoyaltyPointsSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Бонусные баллы',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Доступно: $_availablePoints',
+                  style: GoogleFonts.poppins(
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SwitchListTile(
+              title: const Text('Использовать бонусные баллы'),
+              value: _useLoyaltyPoints,
+              onChanged: _toggleLoyaltyPoints,
+            ),
+            if (_useLoyaltyPoints) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Slider(
+                      value: _pointsToUse.toDouble(),
+                      min: 0,
+                      max: _availablePoints.toDouble(),
+                      divisions: _availablePoints,
+                      label: '$_pointsToUse баллов',
+                      onChanged: (value) => _updatePointsToUse(value.round()),
+                    ),
+                  ),
+                  Text(
+                    '$_pointsToUse',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Text(' баллов'),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
   
@@ -311,7 +476,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
   
-  Widget _buildOrderInfoItem(String title, String value, {bool isBold = false}) {
+  Widget _buildOrderInfoItem(String title, String value, {bool isBold = false, bool isDiscount = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(

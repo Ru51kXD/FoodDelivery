@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../models/food_item.dart';
 import '../providers/cart_provider.dart';
 import '../screens/food_details_screen.dart';
+import '../widgets/safe_image.dart';
 
 class FoodCard extends StatelessWidget {
   final FoodItem foodItem;
@@ -29,7 +30,7 @@ class FoodCard extends StatelessWidget {
 
   Widget _buildHorizontalCard(BuildContext context) {
     return Container(
-      width: 160,
+      width: 280,
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -52,20 +53,11 @@ class FoodCard extends StatelessWidget {
               topLeft: Radius.circular(12),
               topRight: Radius.circular(12),
             ),
-            child: Image.network(
-              foodItem.imageUrl,
-              height: 110,
+            child: SafeImage(
+              imageUrl: foodItem.imageUrl,
+              height: 140,
               width: double.infinity,
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  height: 110,
-                  color: Colors.grey[300],
-                  child: const Center(
-                    child: Icon(Icons.image_not_supported, color: Colors.grey),
-                  ),
-                );
-              },
             ),
           ),
           
@@ -174,20 +166,11 @@ class FoodCard extends StatelessWidget {
               topLeft: Radius.circular(12),
               topRight: Radius.circular(12),
             ),
-            child: Image.network(
-              foodItem.imageUrl,
+            child: SafeImage(
+              imageUrl: foodItem.imageUrl,
               height: 120,
               width: double.infinity,
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  height: 120,
-                  color: Colors.grey[300],
-                  child: const Center(
-                    child: Icon(Icons.image_not_supported, color: Colors.grey),
-                  ),
-                );
-              },
             ),
           ),
           

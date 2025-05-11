@@ -269,7 +269,7 @@ class CartScreen extends StatelessWidget {
           ),
         ),
         onDismissed: (direction) {
-          cartProvider.removeFromCart(item);
+          cartProvider.removeFromCart(item.id);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('${item.food.name} удален из корзины'),
@@ -358,9 +358,9 @@ class CartScreen extends StatelessWidget {
                           icon: Icons.remove,
                           onPressed: () {
                             if (item.quantity > 1) {
-                              cartProvider.updateItemQuantity(item, item.quantity - 1);
+                              cartProvider.updateItemQuantity(item.id, item.quantity - 1);
                             } else {
-                              cartProvider.removeFromCart(item);
+                              cartProvider.removeFromCart(item.id);
                             }
                           },
                           color: Colors.grey[300]!,
@@ -377,7 +377,7 @@ class CartScreen extends StatelessWidget {
                         _buildQuantityButton(
                           icon: Icons.add,
                           onPressed: () {
-                            cartProvider.updateItemQuantity(item, item.quantity + 1);
+                            cartProvider.updateItemQuantity(item.id, item.quantity + 1);
                           },
                           color: Colors.deepOrange,
                         ),
@@ -490,7 +490,7 @@ class CartScreen extends StatelessWidget {
                               IconButton(
                                 onPressed: () {
                                   if (isInCart) {
-                                    cartProvider.removeFromCartById(food.id);
+                                    cartProvider.removeFromCart(food.id);
                                   } else {
                                     cartProvider.addToCart(
                                       food,

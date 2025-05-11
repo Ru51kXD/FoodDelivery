@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 import '../models/user.dart';
-import '../services/user_service.dart';
+import '../services/database_service.dart';
 
 class UserProvider with ChangeNotifier {
-  final UserService _userService = UserService();
+  final DatabaseService _databaseService = DatabaseService();
   
   User? _user;
   bool _isLoading = false;
@@ -15,242 +15,320 @@ class UserProvider with ChangeNotifier {
   String? get error => _error;
   bool get isLoggedIn => _user != null;
   
-  // Инициализация пользователя при запуске приложения
+  // Общая инициализация для LoadingScreen
+  Future<void> init() async {
+    return initUser();
+  }
+  
+  // Инициализация пользователя
   Future<void> initUser() async {
-    _setLoading(true);
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    
     try {
-      _user = await _userService.getCurrentUser();
+      // Добавляем timeout для операции БД, чтобы не зависало бесконечно
+      _user = await _databaseService.getCurrentUser().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () {
+          print("Database operation timed out, creating default user");
+          return _createDefaultUser();
+        },
+      );
       
-      // Если пользователь не найден, создаем гостевой аккаунт
+      // Если пользователь не найден, создаем демо-пользователя
       if (_user == null) {
-        _user = _userService.createDefaultUser();
-        await _userService.saveUser(_user!);
+        _user = _createDefaultUser();
       }
-      
-      notifyListeners();
-    } catch (error) {
-      _setError('Не удалось загрузить данные пользователя: $error');
+    } catch (e) {
+      _error = e.toString();
+      print("Error in initUser: $e - Creating default user");
+      // В случае любой ошибки создаем дефолтного пользователя
+      _user = _createDefaultUser();
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
     }
   }
   
-  // Авторизация пользователя
-  Future<bool> login({required String email, required String password}) async {
-    _setLoading(true);
-    try {
-      _user = await _userService.login(email, password);
-      notifyListeners();
-      return true;
-    } catch (error) {
-      _setError('Ошибка авторизации: $error');
-      return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
-  
-  // Регистрация нового пользователя
-  Future<bool> register({
-    required String name,
-    required String email,
-    required String password,
-    required String phoneNumber,
-  }) async {
-    _setLoading(true);
-    try {
-      _user = await _userService.register(name, email, password, phoneNumber);
-      notifyListeners();
-      return true;
-    } catch (error) {
-      _setError('Ошибка регистрации: $error');
-      return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
-  
-  // Выход из аккаунта
-  Future<void> logout() async {
-    _setLoading(true);
-    try {
-      await _userService.logout();
-      _user = null;
-      notifyListeners();
-    } catch (error) {
-      _setError('Ошибка при выходе из аккаунта: $error');
-    } finally {
-      _setLoading(false);
-    }
+  // Создание дефолтного пользователя без обращения к БД
+  User _createDefaultUser() {
+    return User(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: 'Гость',
+      email: 'guest@example.com',
+      phone: '+7 (999) 123-45-67',
+      address: 'Улица Примерная, 1',
+    );
   }
   
   // Обновление информации о пользователе
-  Future<void> updateUserInfo({
-    String? name,
+  Future<void> updateUser({
+    required String name,
     String? email,
-    String? phoneNumber,
+    String? phone,
+    String? address,
     String? avatarUrl,
   }) async {
-    if (_user == null) return;
+    if (_user == null) {
+      _error = 'Пользователь не авторизован';
+      notifyListeners();
+      return;
+    }
     
-    _setLoading(true);
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    
     try {
-      _user = await _userService.updateUserInfo(
-        _user!.id,
-        name: name ?? _user!.name,
-        email: email ?? _user!.email,
-        phoneNumber: phoneNumber ?? _user!.phoneNumber,
-        avatarUrl: avatarUrl ?? _user!.avatarUrl,
+      final updatedUser = _user!.copyWith(
+        name: name,
+        email: email,
+        phone: phone,
+        address: address,
+        avatarUrl: avatarUrl,
       );
-      notifyListeners();
-    } catch (error) {
-      _setError('Не удалось обновить информацию: $error');
+      
+      await _databaseService.updateUser(updatedUser);
+      _user = updatedUser;
+    } catch (e) {
+      _error = e.toString();
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
     }
   }
   
-  // Добавление нового адреса
-  Future<void> addAddress(Address address) async {
-    if (_user == null) return;
+  // Добавление ресторана в избранное
+  Future<void> addFavoriteRestaurant(String restaurantId) async {
+    if (_user == null) {
+      _error = 'Пользователь не авторизован';
+      notifyListeners();
+      return;
+    }
     
-    _setLoading(true);
-    try {
-      _user = await _userService.addAddress(_user!.id, address);
-      notifyListeners();
-    } catch (error) {
-      _setError('Не удалось добавить адрес: $error');
-    } finally {
-      _setLoading(false);
-    }
-  }
-  
-  // Обновление адреса
-  Future<void> updateAddress(Address address) async {
-    if (_user == null) return;
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
     
-    _setLoading(true);
     try {
-      _user = await _userService.updateAddress(_user!.id, address);
-      notifyListeners();
-    } catch (error) {
-      _setError('Не удалось обновить адрес: $error');
+      final updatedFavorites = [..._user!.favoriteRestaurants, restaurantId];
+      final updatedUser = _user!.copyWith(favoriteRestaurants: updatedFavorites);
+      
+      await _databaseService.updateUser(updatedUser);
+      _user = updatedUser;
+    } catch (e) {
+      _error = e.toString();
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
     }
   }
   
-  // Удаление адреса
-  Future<void> removeAddress(String addressId) async {
-    if (_user == null) return;
+  // Удаление ресторана из избранного
+  Future<void> removeFavoriteRestaurant(String restaurantId) async {
+    if (_user == null) {
+      _error = 'Пользователь не авторизован';
+      notifyListeners();
+      return;
+    }
     
-    _setLoading(true);
-    try {
-      _user = await _userService.removeAddress(_user!.id, addressId);
-      notifyListeners();
-    } catch (error) {
-      _setError('Не удалось удалить адрес: $error');
-    } finally {
-      _setLoading(false);
-    }
-  }
-  
-  // Добавление способа оплаты
-  Future<void> addPaymentMethod(PaymentMethod paymentMethod) async {
-    if (_user == null) return;
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
     
-    _setLoading(true);
     try {
-      _user = await _userService.addPaymentMethod(_user!.id, paymentMethod);
-      notifyListeners();
-    } catch (error) {
-      _setError('Не удалось добавить способ оплаты: $error');
+      final updatedFavorites = _user!.favoriteRestaurants
+          .where((id) => id != restaurantId)
+          .toList();
+      
+      final updatedUser = _user!.copyWith(favoriteRestaurants: updatedFavorites);
+      
+      await _databaseService.updateUser(updatedUser);
+      _user = updatedUser;
+    } catch (e) {
+      _error = e.toString();
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
     }
   }
   
-  // Удаление способа оплаты
-  Future<void> removePaymentMethod(String paymentMethodId) async {
-    if (_user == null) return;
-    
-    _setLoading(true);
-    try {
-      _user = await _userService.removePaymentMethod(_user!.id, paymentMethodId);
-      notifyListeners();
-    } catch (error) {
-      _setError('Не удалось удалить способ оплаты: $error');
-    } finally {
-      _setLoading(false);
-    }
-  }
-  
-  // Добавление/удаление ресторана из избранного
+  // Переключение ресторана в избранное/из избранного
   Future<void> toggleFavoriteRestaurant(String restaurantId) async {
-    if (_user == null) return;
-    
-    final isFavorite = _user!.favoriteRestaurants.contains(restaurantId);
-    
-    _setLoading(true);
-    try {
-      if (isFavorite) {
-        _user = await _userService.removeFavoriteRestaurant(_user!.id, restaurantId);
-      } else {
-        _user = await _userService.addFavoriteRestaurant(_user!.id, restaurantId);
-      }
+    if (_user == null) {
+      _error = 'Пользователь не авторизован';
       notifyListeners();
-    } catch (error) {
-      _setError('Не удалось обновить избранное: $error');
-    } finally {
-      _setLoading(false);
+      return;
+    }
+    
+    if (_user!.favoriteRestaurants.contains(restaurantId)) {
+      await removeFavoriteRestaurant(restaurantId);
+    } else {
+      await addFavoriteRestaurant(restaurantId);
     }
   }
   
-  // Добавление/удаление блюда из избранного
+  // Добавление блюда в избранное
+  Future<void> addFavoriteFood(String foodId) async {
+    if (_user == null) {
+      _error = 'Пользователь не авторизован';
+      notifyListeners();
+      return;
+    }
+    
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    
+    try {
+      final updatedFavorites = [..._user!.favoriteFoods, foodId];
+      final updatedUser = _user!.copyWith(favoriteFoods: updatedFavorites);
+      
+      await _databaseService.updateUser(updatedUser);
+      _user = updatedUser;
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+  
+  // Удаление блюда из избранного
+  Future<void> removeFavoriteFood(String foodId) async {
+    if (_user == null) {
+      _error = 'Пользователь не авторизован';
+      notifyListeners();
+      return;
+    }
+    
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    
+    try {
+      final updatedFavorites = _user!.favoriteFoods
+          .where((id) => id != foodId)
+          .toList();
+      
+      final updatedUser = _user!.copyWith(favoriteFoods: updatedFavorites);
+      
+      await _databaseService.updateUser(updatedUser);
+      _user = updatedUser;
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+  
+  // Переключение блюда в избранное/из избранного
   Future<void> toggleFavoriteFood(String foodId) async {
-    if (_user == null) return;
-    
-    final isFavorite = _user!.favoriteFoods.contains(foodId);
-    
-    _setLoading(true);
-    try {
-      if (isFavorite) {
-        _user = await _userService.removeFavoriteFood(_user!.id, foodId);
-      } else {
-        _user = await _userService.addFavoriteFood(_user!.id, foodId);
-      }
+    if (_user == null) {
+      _error = 'Пользователь не авторизован';
       notifyListeners();
-    } catch (error) {
-      _setError('Не удалось обновить избранное: $error');
-    } finally {
-      _setLoading(false);
+      return;
+    }
+    
+    if (_user!.favoriteFoods.contains(foodId)) {
+      await removeFavoriteFood(foodId);
+    } else {
+      await addFavoriteFood(foodId);
     }
   }
   
-  // Добавление тестовых заказов для отображения в профиле (для демонстрации)
-  Future<void> addTestOrders() async {
-    if (_user == null) return;
+  // Выход из учетной записи
+  Future<void> logout() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
     
-    // Здесь должна быть логика добавления тестовых заказов
-    // В реальном приложении заказы будут приходить с сервера
+    try {
+      _user = null;
+      // Создаем нового гостевого пользователя
+      _user = _createDefaultUser();
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+  
+  // Вход в учетную запись
+  Future<void> login(String email, String password) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
     
-    // Сейчас просто обновим пользователя для инициализации
-    notifyListeners();
+    try {
+      // Создаем пользователя с указанным email - без обращения к БД
+      _user = User(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: 'Пользователь',
+        email: email,
+        phone: '+7 (999) 123-45-67',
+        address: 'Улица Примерная, 1',
+      );
+    } catch (e) {
+      _error = e.toString();
+      print("Login error: $e");
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
   
-  // Вспомогательные методы
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
+  // Вставка пользователя в БД (обёртка над сервисом БД)
+  Future<void> _insertUser(User user) async {
+    try {
+      // Используем Future.delayed с таймаутом
+      bool completed = false;
+      
+      Future.delayed(const Duration(seconds: 2), () {
+        if (!completed) {
+          print("Database operation timed out in _insertUser");
+          return;
+        }
+      });
+      
+      // Проверяем наличие пользователя
+      final existingUser = await _databaseService.getCurrentUser();
+      print("Existing user check: ${existingUser?.id ?? 'no user found'}");
+      
+      // Если пользователь уже существует, обновляем его
+      if (existingUser != null) {
+        print("Updating existing user: ${existingUser.id}");
+        await _databaseService.updateUser(user);
+      } else {
+        // Вставляем нового пользователя через инсерт в БД
+        print("Inserting new user with ID: ${user.id}");
+        final db = await _databaseService.database;
+        await db.insert('users', user.toMap());
+      }
+      
+      completed = true;
+      print("User operation completed successfully");
+    } catch (e) {
+      print("Error in _insertUser: $e");
+      // Не выбрасываем исключение, чтобы не блокировать основной поток
+    }
   }
   
-  void _setError(String error) {
-    _error = error;
-    notifyListeners();
-  }
-  
+  // Очистка ошибки
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+  
+  // Принудительный сброс состояния загрузки в случае таймаута
+  void forceResetLoadingState() {
+    if (_isLoading) {
+      print("Force resetting loading state due to timeout");
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 } 

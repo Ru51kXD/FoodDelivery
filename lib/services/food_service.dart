@@ -7,6 +7,13 @@ import '../data/mock_data.dart';
 class FoodService {
   final String _baseUrl = 'https://your-api-endpoint.com/api'; // Заменить на реальный API при необходимости
   final bool _useMockData = true; // Используем моковые данные вместо реального API
+  List<Restaurant> _restaurants = [];
+  
+  FoodService() {
+    if (_useMockData) {
+      _restaurants = mockRestaurants;
+    }
+  }
   
   // Получение всех блюд
   Future<List<FoodItem>> getAllFoodItems() async {
@@ -183,24 +190,19 @@ class FoodService {
   // Поиск ресторанов по названию
   Future<List<Restaurant>> searchRestaurants(String query) async {
     if (_useMockData) {
-      await Future.delayed(const Duration(milliseconds: 400));
-      // Фильтруем рестораны по запросу
-      final lowercaseQuery = query.toLowerCase();
-      return mockRestaurants
-          .where((restaurant) => 
-            restaurant.name.toLowerCase().contains(lowercaseQuery) ||
-            restaurant.description.toLowerCase().contains(lowercaseQuery))
-          .toList();
+      return _restaurants.where((restaurant) {
+        final nameMatch = restaurant.name.toLowerCase().contains(query.toLowerCase());
+        final descriptionMatch = restaurant.description?.toLowerCase().contains(query.toLowerCase()) ?? false;
+        return nameMatch || descriptionMatch;
+      }).toList();
     }
     
-    final response = await http.get(Uri.parse('$_baseUrl/restaurants/search?query=$query'));
-    
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body) as List;
-      return data.map((json) => Restaurant.fromJson(json)).toList();
-    } else {
-      throw Exception('Не удалось выполнить поиск ресторанов');
-    }
+    final lowercaseQuery = query.toLowerCase();
+    return _restaurants.where((restaurant) {
+      final nameMatch = restaurant.name.toLowerCase().contains(lowercaseQuery);
+      final descriptionMatch = restaurant.description?.toLowerCase().contains(lowercaseQuery) ?? false;
+      return nameMatch || descriptionMatch;
+    }).toList();
   }
   
   // Получение блюд по категории

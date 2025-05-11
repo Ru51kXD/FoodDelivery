@@ -4,58 +4,49 @@ class Restaurant {
   final String description;
   final String imageUrl;
   final String coverImageUrl;
-  final List<String> categories;
   final double rating;
   final int reviewCount;
+  final List<String> categories;
   final String address;
-  final bool isOpen;
-  final String deliveryTime;
   final double deliveryFee;
+  final int deliveryTime;
   final double minOrderAmount;
-  final WorkingHours workingHours;
-  final ContactInfo contactInfo;
-  final bool isFeatured;
-  
+  final bool isOpen;
+
   Restaurant({
     required this.id,
     required this.name,
     required this.description,
     required this.imageUrl,
     required this.coverImageUrl,
-    required this.categories,
     required this.rating,
     required this.reviewCount,
+    required this.categories,
     required this.address,
-    required this.isOpen,
-    required this.deliveryTime,
     required this.deliveryFee,
+    required this.deliveryTime,
     required this.minOrderAmount,
-    required this.workingHours,
-    required this.contactInfo,
-    this.isFeatured = false,
+    required this.isOpen,
   });
-  
+
   factory Restaurant.fromJson(Map<String, dynamic> json) {
     return Restaurant(
-      id: json['id'],
-      name: json['name'],
-      description: json['description'],
-      imageUrl: json['imageUrl'],
-      coverImageUrl: json['coverImageUrl'],
-      categories: List<String>.from(json['categories']),
-      rating: json['rating'].toDouble(),
-      reviewCount: json['reviewCount'],
-      address: json['address'],
-      isOpen: json['isOpen'],
-      deliveryTime: json['deliveryTime'],
-      deliveryFee: json['deliveryFee'].toDouble(),
-      minOrderAmount: json['minOrderAmount'].toDouble(),
-      workingHours: WorkingHours.fromJson(json['workingHours']),
-      contactInfo: ContactInfo.fromJson(json['contactInfo']),
-      isFeatured: json['isFeatured'] ?? false,
+      id: json['id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String,
+      imageUrl: json['imageUrl'] as String,
+      coverImageUrl: json['coverImageUrl'] as String,
+      rating: (json['rating'] as num).toDouble(),
+      reviewCount: json['reviewCount'] as int,
+      categories: List<String>.from(json['categories'] as List),
+      address: json['address'] as String,
+      deliveryFee: (json['deliveryFee'] as num).toDouble(),
+      deliveryTime: json['deliveryTime'] as int,
+      minOrderAmount: (json['minOrderAmount'] as num).toDouble(),
+      isOpen: json['isOpen'] as bool,
     );
   }
-  
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -63,17 +54,14 @@ class Restaurant {
       'description': description,
       'imageUrl': imageUrl,
       'coverImageUrl': coverImageUrl,
-      'categories': categories,
       'rating': rating,
       'reviewCount': reviewCount,
+      'categories': categories,
       'address': address,
-      'isOpen': isOpen,
-      'deliveryTime': deliveryTime,
       'deliveryFee': deliveryFee,
+      'deliveryTime': deliveryTime,
       'minOrderAmount': minOrderAmount,
-      'workingHours': workingHours.toJson(),
-      'contactInfo': contactInfo.toJson(),
-      'isFeatured': isFeatured,
+      'isOpen': isOpen,
     };
   }
 }

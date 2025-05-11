@@ -13,7 +13,7 @@ class UserService {
       id: _uuid.v4(),
       name: 'Гость',
       email: 'guest@example.com',
-      phoneNumber: '',
+      phone: '',
       addresses: [],
       paymentMethods: [],
       favoriteRestaurants: [],
@@ -64,7 +64,7 @@ class UserService {
         id: _uuid.v4(),
         name: 'Иван Иванов',
         email: email,
-        phoneNumber: '+7 (999) 123-45-67',
+        phone: '+7 (999) 123-45-67',
         avatarUrl: 'https://randomuser.me/api/portraits/men/43.jpg',
         addresses: [
           Address(
@@ -122,7 +122,7 @@ class UserService {
   }
   
   // Регистрация нового пользователя
-  Future<User> register(String name, String email, String password, String phoneNumber) async {
+  Future<User> register(String name, String email, String password, String phone) async {
     // Имитация задержки сети
     await Future.delayed(const Duration(milliseconds: 1500));
     
@@ -136,7 +136,7 @@ class UserService {
       id: _uuid.v4(),
       name: name,
       email: email,
-      phoneNumber: phoneNumber,
+      phone: phone,
       addresses: [],
       paymentMethods: [],
       isEmailVerified: false,
@@ -165,7 +165,7 @@ class UserService {
     String userId, {
     required String name,
     required String email,
-    required String phoneNumber,
+    required String phone,
     String? avatarUrl,
   }) async {
     try {
@@ -180,7 +180,7 @@ class UserService {
       final updatedUser = currentUser.copyWith(
         name: name,
         email: email,
-        phoneNumber: phoneNumber,
+        phone: phone,
         avatarUrl: avatarUrl,
       );
       

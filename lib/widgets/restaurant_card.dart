@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../models/restaurant.dart';
 import '../screens/restaurant_details_screen.dart';
+import '../widgets/safe_image.dart';
 
 class RestaurantCard extends StatelessWidget {
   final Restaurant restaurant;
@@ -52,20 +53,11 @@ class RestaurantCard extends StatelessWidget {
                   topLeft: Radius.circular(12),
                   topRight: Radius.circular(12),
                 ),
-                child: Image.network(
-                  restaurant.imageUrl,
+                child: SafeImage(
+                  imageUrl: restaurant.imageUrl ?? 'https://via.placeholder.com/400x300',
                   height: 140,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 140,
-                      color: Colors.grey[300],
-                      child: const Center(
-                        child: Icon(Icons.image_not_supported, color: Colors.grey),
-                      ),
-                    );
-                  },
                 ),
               ),
               // Статус (открыт/закрыт)
@@ -157,10 +149,10 @@ class RestaurantCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      restaurant.deliveryTime,
+                      '${restaurant.deliveryTime} мин',
                       style: TextStyle(
-                        fontSize: 12,
                         color: Colors.grey[600],
+                        fontSize: 12,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -180,6 +172,16 @@ class RestaurantCard extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  restaurant.description ?? 'Нет описания',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -214,20 +216,11 @@ class RestaurantCard extends StatelessWidget {
                   topLeft: Radius.circular(12),
                   topRight: Radius.circular(12),
                 ),
-                child: Image.network(
-                  restaurant.imageUrl,
+                child: SafeImage(
+                  imageUrl: restaurant.imageUrl ?? 'https://via.placeholder.com/400x300',
                   height: 120,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 120,
-                      color: Colors.grey[300],
-                      child: const Center(
-                        child: Icon(Icons.image_not_supported, color: Colors.grey),
-                      ),
-                    );
-                  },
                 ),
               ),
               // Статус (открыт/закрыт)
@@ -319,18 +312,40 @@ class RestaurantCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 2),
                     Text(
-                      restaurant.deliveryTime,
+                      '${restaurant.deliveryTime} мин',
                       style: TextStyle(
-                        fontSize: 10,
                         color: Colors.grey[600],
+                        fontSize: 12,
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  restaurant.description ?? 'Нет описания',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRestaurantImage() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SafeImage(
+        imageUrl: restaurant.imageUrl ?? 'https://via.placeholder.com/400x300',
+        width: double.infinity,
+        height: 120,
+        fit: BoxFit.cover,
       ),
     );
   }

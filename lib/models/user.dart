@@ -4,8 +4,9 @@ import 'order.dart';
 class User {
   final String id;
   final String name;
-  final String email;
-  final String phoneNumber;
+  final String? email;
+  final String? phone;
+  final String? address;
   final String? avatarUrl;
   final List<Address> addresses;
   final List<PaymentMethod> paymentMethods;
@@ -19,8 +20,9 @@ class User {
   User({
     required this.id,
     required this.name,
-    required this.email,
-    required this.phoneNumber,
+    this.email,
+    this.phone,
+    this.address,
     this.avatarUrl,
     this.addresses = const [],
     this.paymentMethods = const [],
@@ -36,7 +38,8 @@ class User {
     String? id,
     String? name,
     String? email,
-    String? phoneNumber,
+    String? phone,
+    String? address,
     String? avatarUrl,
     List<Address>? addresses,
     List<PaymentMethod>? paymentMethods,
@@ -51,7 +54,8 @@ class User {
       id: id ?? this.id,
       name: name ?? this.name,
       email: email ?? this.email,
-      phoneNumber: phoneNumber ?? this.phoneNumber,
+      phone: phone ?? this.phone,
+      address: address ?? this.address,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       addresses: addresses ?? this.addresses,
       paymentMethods: paymentMethods ?? this.paymentMethods,
@@ -64,13 +68,46 @@ class User {
     );
   }
   
+  // Метод для создания объекта User из карты базы данных
+  factory User.fromMap(Map<String, dynamic> map) {
+    return User(
+      id: map['id'] as String,
+      name: map['name'] as String,
+      email: map['email'] as String?,
+      phone: map['phone'] as String?,
+      address: map['address'] as String?,
+      avatarUrl: map['avatar_url'] as String?,
+      favoriteRestaurants: (map['favorite_restaurants'] as String?)?.split(',').where((s) => s.isNotEmpty).toList() ?? [],
+      favoriteFoods: (map['favorite_foods'] as String?)?.split(',').where((s) => s.isNotEmpty).toList() ?? [],
+      isEmailVerified: (map['is_email_verified'] as int?) == 1,
+      isPhoneVerified: (map['is_phone_verified'] as int?) == 1,
+    );
+  }
+  
+  // Метод для преобразования объекта User в карту для базы данных
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'address': address,
+      'avatar_url': avatarUrl,
+      'favorite_restaurants': favoriteRestaurants.join(','),
+      'favorite_foods': favoriteFoods.join(','),
+      'is_email_verified': isEmailVerified ? 1 : 0,
+      'is_phone_verified': isPhoneVerified ? 1 : 0,
+    };
+  }
+  
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['id'],
-      name: json['name'],
-      email: json['email'],
-      phoneNumber: json['phoneNumber'],
-      avatarUrl: json['avatarUrl'],
+      id: json['id'] as String,
+      name: json['name'] as String,
+      email: json['email'] as String?,
+      phone: json['phone'] as String?,
+      address: json['address'] as String?,
+      avatarUrl: json['avatarUrl'] as String?,
       addresses: json['addresses'] != null
           ? List<Address>.from(
               json['addresses'].map((address) => Address.fromJson(address)))
@@ -96,7 +133,8 @@ class User {
       'id': id,
       'name': name,
       'email': email,
-      'phoneNumber': phoneNumber,
+      'phone': phone,
+      'address': address,
       'avatarUrl': avatarUrl,
       'addresses': addresses.map((address) => address.toJson()).toList(),
       'paymentMethods': paymentMethods.map((method) => method.toJson()).toList(),

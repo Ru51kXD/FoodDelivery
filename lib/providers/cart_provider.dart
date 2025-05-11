@@ -2,200 +2,181 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../models/cart_item.dart';
-import '../models/food_item.dart';
-import '../services/cart_service.dart';
+import '../models/food.dart';
+import '../models/selected_option.dart';
+import '../services/database_service.dart';
 
 class CartProvider with ChangeNotifier {
-  final CartService _cartService = CartService();
+  final DatabaseService _databaseService = DatabaseService();
   final Uuid _uuid = const Uuid();
   
   List<CartItem> _items = [];
   bool _isLoading = false;
   String? _error;
   
+  CartProvider() {
+    _loadCart();
+  }
+  
   // Геттеры
   List<CartItem> get items => _items;
-  int get itemCount => _items.fold(0, (sum, item) => sum + item.quantity);
-  double get totalPrice => _items.fold(0, (sum, item) => sum + item.totalPrice);
+  int get itemCount => _items.length;
+  double get totalAmount {
+    return _items.fold(0.0, (sum, item) => sum + item.totalPrice);
+  }
+  double get totalPrice => totalAmount;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isEmpty => _items.isEmpty;
   
-  // Инициализация корзины
-  Future<void> initCart() async {
-    _setLoading(true);
+  // Загрузка корзины
+  Future<void> _loadCart() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
     try {
-      _items = await _cartService.loadCart();
-      notifyListeners();
-    } catch (error) {
-      _setError('Не удалось загрузить корзину: $error');
+      _items = await _databaseService.getCartItems();
+    } catch (e) {
+      _error = e.toString();
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
     }
   }
   
   // Добавление товара в корзину
-  Future<void> addToCart(
-    FoodItem food, {
-    int quantity = 1,
-    List<String> additionalOptions = const [],
-    String? specialInstructions,
-    List<SelectedOption> selectedOptions = const [],
-  }) async {
-    // Проверяем, есть ли уже такой товар в корзине
-    final index = _items.indexWhere(
-      (item) => 
-        item.food.id == food.id && 
-        _areListsEqual(item.additionalOptions, additionalOptions) &&
-        item.specialInstructions == specialInstructions &&
-        _areSelectedOptionsEqual(item.selectedOptions, selectedOptions)
-    );
-    
-    if (index >= 0) {
-      // Если товар уже есть в корзине, увеличиваем количество
-      await updateItemQuantity(_items[index], _items[index].quantity + quantity);
-    } else {
-      // Если товара нет, добавляем новый
-      final cartItem = CartItem(
-        id: _uuid.v4(),
-        food: food,
-        quantity: quantity,
-        additionalOptions: additionalOptions,
-        specialInstructions: specialInstructions,
-        selectedOptions: selectedOptions,
-      );
+  Future<void> addItem(Food food, {int quantity = 1}) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      // Проверяем, есть ли уже такой товар в корзине
+      final existingItemIndex = _items.indexWhere((item) => item.food.id == food.id);
       
-      _items.add(cartItem);
-      await _saveCart();
+      if (existingItemIndex >= 0) {
+        // Если товар уже есть, увеличиваем количество
+        final existingItem = _items[existingItemIndex];
+        final updatedItem = existingItem.copyWith(quantity: existingItem.quantity + quantity);
+        _items[existingItemIndex] = updatedItem;
+        await _databaseService.updateCartItem(updatedItem);
+      } else {
+        // Если товара нет, создаем новый элемент корзины
+        final newItem = CartItem(
+          id: _uuid.v4(),
+          food: food,
+          quantity: quantity,
+        );
+        _items.add(newItem);
+        await _databaseService.insertCartItem(newItem);
+      }
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
   }
   
   // Удаление товара из корзины
-  Future<void> removeFromCart(CartItem item) async {
-    _items.remove(item);
-    await _saveCart();
+  Future<void> removeItem(String itemId) async {
+    _isLoading = true;
+    _error = null;
     notifyListeners();
+
+    try {
+      _items.removeWhere((item) => item.id == itemId);
+      await _databaseService.deleteCartItem(itemId);
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
   
   // Обновление количества товара
-  Future<void> updateItemQuantity(CartItem item, int newQuantity) async {
-    if (newQuantity <= 0) {
-      await removeFromCart(item);
+  Future<void> updateQuantity(String itemId, int quantity) async {
+    if (quantity <= 0) {
+      await removeItem(itemId);
       return;
     }
-    
-    final index = _items.indexWhere((i) => i.id == item.id);
-    if (index >= 0) {
-      _items[index].quantity = newQuantity;
-      await _saveCart();
+
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final itemIndex = _items.indexWhere((item) => item.id == itemId);
+      if (itemIndex >= 0) {
+        final updatedItem = _items[itemIndex].copyWith(quantity: quantity);
+        _items[itemIndex] = updatedItem;
+        await _databaseService.updateCartItem(updatedItem);
+      }
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
   }
   
   // Очистка корзины
   Future<void> clearCart() async {
-    _items.clear();
-    await _saveCart();
+    _isLoading = true;
+    _error = null;
     notifyListeners();
-  }
-  
-  // Получение товара по ID
-  CartItem? getItemById(String id) {
+
     try {
-      return _items.firstWhere((item) => item.id == id);
+      _items.clear();
+      await _databaseService.clearCart();
     } catch (e) {
-      return null;
-    }
-  }
-  
-  // Проверка наличия товара в корзине
-  bool hasItem(String foodId) {
-    return _items.any((item) => item.food.id == foodId);
-  }
-  
-  // Проверка наличия товара в корзине по ID (альтернативный метод)
-  bool isInCart(String foodId) {
-    return _items.any((item) => item.food.id == foodId);
-  }
-  
-  // Удаление товара из корзины по ID товара
-  Future<void> removeFromCartById(String foodId) async {
-    final itemIndex = _items.indexWhere((item) => item.food.id == foodId);
-    if (itemIndex >= 0) {
-      await removeFromCart(_items[itemIndex]);
-    }
-  }
-  
-  // Расчет стоимости доставки
-  double calculateDeliveryFee() {
-    // Простой пример расчета стоимости доставки
-    if (totalPrice > 2000) return 0; // Бесплатная доставка при заказе от 2000
-    if (totalPrice > 1000) return 99;
-    return 199;
-  }
-  
-  // Расчет сервисного сбора
-  double calculateServiceFee() {
-    return totalPrice * 0.05; // 5% от стоимости заказа
-  }
-  
-  // Расчет итоговой суммы заказа
-  double calculateTotalAmount() {
-    return totalPrice + calculateDeliveryFee() + calculateServiceFee();
-  }
-  
-  // Сохранение корзины
-  Future<void> _saveCart() async {
-    try {
-      await _cartService.saveCart(_items);
-    } catch (error) {
-      _setError('Не удалось сохранить корзину: $error');
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
   
   // Вспомогательные методы
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
-  }
-  
-  void _setError(String error) {
-    _error = error;
-    notifyListeners();
-  }
-  
   void clearError() {
     _error = null;
     notifyListeners();
   }
-  
-  bool _areListsEqual(List<String> list1, List<String> list2) {
-    if (list1.length != list2.length) return false;
-    
-    for (int i = 0; i < list1.length; i++) {
-      if (list1[i] != list2[i]) return false;
-    }
-    
-    return true;
+
+  // Алиасы для совместимости
+  Future<void> addToCart(Food food, {int quantity = 1, String? specialInstructions, List<SelectedOption>? selectedOptions}) => 
+      addItem(food, quantity: quantity);
+  Future<void> removeFromCart(String itemId) => removeItem(itemId);
+  Future<void> updateItemQuantity(String itemId, int quantity) => updateQuantity(itemId, quantity);
+
+  // Проверка наличия товара в корзине
+  bool hasItem(String foodId) {
+    return _items.any((item) => item.food.id == foodId);
   }
-  
-  bool _areSelectedOptionsEqual(List<SelectedOption> list1, List<SelectedOption> list2) {
-    if (list1.length != list2.length) return false;
-    
-    for (int i = 0; i < list1.length; i++) {
-      if (list1[i].name != list2[i].name || 
-          list1[i].choices.length != list2[i].choices.length) {
-        return false;
-      }
-      
-      for (int j = 0; j < list1[i].choices.length; j++) {
-        if (list1[i].choices[j].name != list2[i].choices[j].name) {
-          return false;
-        }
-      }
-    }
-    
-    return true;
+
+  bool isInCart(String foodId) => hasItem(foodId);
+
+  // Получение количества товара в корзине
+  int getItemQuantity(String foodId) {
+    final item = _items.firstWhere(
+      (item) => item.food.id == foodId,
+      orElse: () => CartItem(
+        id: '',
+        food: Food(
+          id: '',
+          name: '',
+          description: '',
+          imageUrl: '',
+          price: 0,
+          restaurantId: '',
+          categories: [],
+          isAvailable: true,
+        ),
+        quantity: 0,
+      ),
+    );
+    return item.quantity;
   }
 } 

@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
 import '../providers/user_provider.dart';
 import '../models/user.dart';
-import '../models/order.dart' hide PaymentMethod;
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -14,75 +13,13 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  bool _isEditing = false;
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
-
+  final int _bonusPoints = 1250;
+  final String _bonusLevel = "Серебряный";
+  final int _totalOrders = 17;
+  
   @override
   void initState() {
     super.initState();
-    // Заполняем поля данными пользователя
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      if (userProvider.user != null) {
-        _nameController.text = userProvider.user!.name;
-        _emailController.text = userProvider.user!.email;
-        _phoneController.text = userProvider.user!.phoneNumber;
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    super.dispose();
-  }
-
-  void _toggleEditMode() {
-    setState(() {
-      _isEditing = !_isEditing;
-    });
-  }
-
-  Future<void> _saveProfile() async {
-    if (_formKey.currentState!.validate()) {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      try {
-        await userProvider.updateUserInfo(
-          name: _nameController.text,
-          email: _emailController.text,
-          phoneNumber: _phoneController.text,
-        );
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Профиль успешно обновлен',
-                style: GoogleFonts.poppins(),
-              ),
-              backgroundColor: Colors.green,
-            ),
-          );
-          _toggleEditMode();
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Ошибка при обновлении профиля: $e',
-                style: GoogleFonts.poppins(),
-              ),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    }
   }
 
   @override
@@ -105,562 +42,476 @@ class _ProfileScreenState extends State<ProfileScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              _isEditing ? Icons.check : Icons.edit, 
-              color: Colors.deepOrange,
-            ),
-            onPressed: _isEditing ? _saveProfile : _toggleEditMode,
-          ),
-        ],
       ),
-      body: Consumer<UserProvider>(
-        builder: (context, userProvider, child) {
-          if (userProvider.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.deepOrange),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Профиль пользователя
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
               ),
-            );
-          }
-
-          final user = userProvider.user;
-          if (user == null) {
-            return _buildNotLoggedInView();
-          }
-
-          return SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: _isEditing ? _buildEditForm(user) : _buildProfileInfo(user),
-          );
-        },
-      ),
-    );
-  }
-  
-  Widget _buildNotLoggedInView() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            height: 150,
-            width: 150,
-            decoration: BoxDecoration(
-              color: Colors.deepOrange.withOpacity(0.1),
-              shape: BoxShape.circle,
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.deepOrange.withOpacity(0.2),
+                    child: Text(
+                      "П",
+                      style: GoogleFonts.poppins(
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepOrange,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Пётр Иванов",
+                    style: GoogleFonts.poppins(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    "petr@example.com",
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "+7 (999) 123-45-67",
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Редактирование профиля
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepOrange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      "Редактировать профиль",
+                      style: GoogleFonts.poppins(),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Icon(
-              Icons.person_outline,
-              size: 80,
-              color: Colors.deepOrange,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Вы не авторизованы',
-            style: GoogleFonts.poppins(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Войдите в аккаунт, чтобы увидеть профиль',
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              color: Colors.black54,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: () {
-              // Здесь будет логика для входа
-              // Вместо createDefaultUser используем login
-              final userProvider = Provider.of<UserProvider>(context, listen: false);
-              userProvider.login(email: 'demo@example.com', password: 'password123');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.deepOrange,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              shape: RoundedRectangleBorder(
+            
+            const SizedBox(height: 16),
+            
+            // Бонусная программа
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.deepOrange.shade400, Colors.deepOrange.shade700],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.deepOrange.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
               ),
-              elevation: 0,
-            ),
-            child: Text(
-              'Войти',
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Бонусная программа",
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(50),
+                        ),
+                        child: Text(
+                          _bonusLevel,
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    "$_bonusPoints бонусов",
+                    style: GoogleFonts.poppins(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "До золотого уровня: 750 бонусов",
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.8),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  LinearProgressIndicator(
+                    value: 0.6, // 60% до следующего уровня
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "1 заказ = 100 бонусов",
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.white.withOpacity(0.8),
+                        ),
+                      ),
+                      Text(
+                        "Подробнее >",
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildProfileInfo(User user) {
-    return Column(
-      children: [
-        // Верхняя карточка с аватаром и основной информацией
-        Container(
-          width: double.infinity,
-          margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                offset: const Offset(0, 4),
-                blurRadius: 10,
+            const SizedBox(height: 24),
+            
+            // История заказов
+            _buildSection(
+              title: "История заказов",
+              icon: Icons.receipt_long,
+              content: Column(
+                children: [
+                  _buildOrderItem(
+                    orderNumber: "1234",
+                    date: "12.06.2023",
+                    status: "Доставлен",
+                    amount: "1 250 ₽",
+                    statusColor: Colors.green,
+                  ),
+                  _buildOrderItem(
+                    orderNumber: "1233",
+                    date: "05.06.2023",
+                    status: "Доставлен",
+                    amount: "990 ₽",
+                    statusColor: Colors.green,
+                  ),
+                  _buildOrderItem(
+                    orderNumber: "1232",
+                    date: "01.06.2023",
+                    status: "Доставлен",
+                    amount: "1 550 ₽",
+                    statusColor: Colors.green,
+                  ),
+                  Center(
+                    child: TextButton(
+                      onPressed: () {
+                        // Показать все заказы
+                      },
+                      child: Text(
+                        "Показать все заказы ($_totalOrders)",
+                        style: GoogleFonts.poppins(
+                          color: Colors.deepOrange,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Аватар пользователя
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.deepOrange.withOpacity(0.2),
-                    width: 4,
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Избранные рестораны
+            _buildSection(
+              title: "Избранные рестораны",
+              icon: Icons.favorite,
+              content: Column(
+                children: [
+                  _buildFavoriteItem(
+                    name: "ГрильХаус",
+                    imageUrl: "https://i.imgur.com/1tMFzp8.jpeg",
+                    rating: 4.8,
+                    category: "Стейки, Гриль",
+                  ),
+                  _buildFavoriteItem(
+                    name: "Суши Мастер",
+                    imageUrl: "https://i.imgur.com/LV4Rqak.jpeg",
+                    rating: 4.5,
+                    category: "Японская кухня",
+                  ),
+                  _buildFavoriteItem(
+                    name: "Итальяно",
+                    imageUrl: "https://i.imgur.com/XPZYXWs.jpeg",
+                    rating: 4.7,
+                    category: "Итальянская кухня",
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Настройки
+            _buildSection(
+              title: "Настройки",
+              icon: Icons.settings,
+              content: Column(
+                children: [
+                  _buildSettingsItem(
+                    title: "Уведомления",
+                    icon: Icons.notifications_outlined,
+                    trailing: Switch(
+                      value: true,
+                      onChanged: (value) {},
+                      activeColor: Colors.deepOrange,
+                    ),
+                  ),
+                  _buildSettingsItem(
+                    title: "Адреса доставки",
+                    icon: Icons.location_on_outlined,
+                    trailing: const Icon(Icons.chevron_right),
+                  ),
+                  _buildSettingsItem(
+                    title: "Способы оплаты",
+                    icon: Icons.payment_outlined,
+                    trailing: const Icon(Icons.chevron_right),
+                  ),
+                  _buildSettingsItem(
+                    title: "Язык приложения",
+                    icon: Icons.language_outlined,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          "Русский",
+                          style: GoogleFonts.poppins(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Кнопка выхода
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: ElevatedButton(
+                onPressed: () {
+                  // Выход из аккаунта
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade50,
+                  foregroundColor: Colors.red,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  minimumSize: const Size(double.infinity, 56),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: CircleAvatar(
-                  radius: 50,
-                  backgroundColor: Colors.grey[200],
-                  backgroundImage: user.avatarUrl != null
-                      ? NetworkImage(user.avatarUrl!)
-                      : null,
-                  child: user.avatarUrl == null
-                      ? Text(
-                          user.name.substring(0, 1).toUpperCase(),
-                          style: GoogleFonts.poppins(
-                            fontSize: 40,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.deepOrange,
-                          ),
-                        )
-                      : null,
+                child: Text(
+                  "Выйти из аккаунта",
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              
-              // Имя пользователя
-              Text(
-                user.name,
-                style: GoogleFonts.poppins(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              
-              // Инфо о пользователе
-              _buildInfoItem(Icons.email, user.email),
-              const SizedBox(height: 8),
-              _buildInfoItem(Icons.phone, user.phoneNumber),
-            ],
-          ),
-        ),
-        
-        // Адреса доставки
-        _buildSectionCard(
-          title: 'Адреса доставки',
-          icon: Icons.location_on,
-          content: user.addresses.isEmpty
-              ? _buildEmptyStateMessage('У вас нет сохраненных адресов')
-              : Column(
-                  children: user.addresses.map((address) => 
-                    _buildAddressItem(address)
-                  ).toList(),
-                ),
-          actionButton: TextButton.icon(
-            icon: const Icon(Icons.add, color: Colors.deepOrange),
-            label: Text(
-              'Добавить адрес',
-              style: GoogleFonts.poppins(
-                color: Colors.deepOrange,
-                fontWeight: FontWeight.w500,
               ),
             ),
-            onPressed: () {
-              // Логика добавления адреса
-            },
-          ),
+            
+            const SizedBox(height: 40),
+          ],
         ),
-        
-        // Способы оплаты
-        _buildSectionCard(
-          title: 'Способы оплаты',
-          icon: Icons.payment,
-          content: user.paymentMethods.isEmpty
-              ? _buildEmptyStateMessage('У вас нет сохраненных способов оплаты')
-              : Column(
-                  children: user.paymentMethods.map((method) => 
-                    _buildPaymentMethodItem(method)
-                  ).toList(),
-                ),
-          actionButton: TextButton.icon(
-            icon: const Icon(Icons.add, color: Colors.deepOrange),
-            label: Text(
-              'Добавить способ оплаты',
-              style: GoogleFonts.poppins(
-                color: Colors.deepOrange,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            onPressed: () {
-              // Логика добавления способа оплаты
-            },
-          ),
-        ),
-        
-        // История заказов
-        _buildSectionCard(
-          title: 'История заказов',
-          icon: Icons.receipt_long,
-          content: user.orders.isEmpty
-              ? _buildEmptyStateMessage('У вас нет истории заказов')
-              : Column(
-                  children: user.orders.map((order) => 
-                    _buildOrderItem(order)
-                  ).toList(),
-                ),
-          actionButton: null,
-        ),
-        
-        // Кнопка выхода
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.logout),
-            label: Text(
-              'Выйти из аккаунта',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            onPressed: () {
-              // Логика выхода из аккаунта
-              final userProvider = Provider.of<UserProvider>(context, listen: false);
-              userProvider.logout();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade50,
-              foregroundColor: Colors.red,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-          ),
-        ),
-        
-        const SizedBox(height: 24),
-      ],
+      ),
     );
   }
   
-  Widget _buildInfoItem(IconData icon, String text) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          size: 18,
-          color: Colors.grey[600],
-        ),
-        const SizedBox(width: 8),
-        Text(
-          text,
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
-        ),
-      ],
-    );
-  }
-  
-  Widget _buildSectionCard({
+  Widget _buildSection({
     required String title,
     required IconData icon,
     required Widget content,
-    Widget? actionButton,
   }) {
     return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
             offset: const Offset(0, 2),
-            blurRadius: 6,
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                icon,
-                color: Colors.deepOrange,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(icon, color: Colors.deepOrange),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const Divider(height: 32),
-          content,
-          if (actionButton != null) const SizedBox(height: 8),
-          if (actionButton != null) actionButton,
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: content,
+          ),
         ],
       ),
     );
   }
   
-  Widget _buildEmptyStateMessage(String message) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text(
-          message,
-          style: GoogleFonts.poppins(
-            color: Colors.grey[500],
-            fontStyle: FontStyle.italic,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildAddressItem(Address address) {
+  Widget _buildOrderItem({
+    required String orderNumber,
+    required String date,
+    required String status,
+    required String amount,
+    required Color statusColor,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: address.isDefault ? Colors.deepOrange.withOpacity(0.3) : Colors.grey.shade200,
-          width: address.isDefault ? 2 : 1,
-        ),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.home,
-            color: address.isDefault ? Colors.deepOrange : Colors.grey[600],
-            size: 24,
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.deepOrange.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.receipt,
+              color: Colors.deepOrange,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Text(
-                      address.title,
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    if (address.isDefault)
-                      Container(
-                        margin: const EdgeInsets.only(left: 8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.deepOrange.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'По умолчанию',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.deepOrange,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
                 Text(
-                  address.fullAddress,
+                  "Заказ #$orderNumber",
                   style: GoogleFonts.poppins(
-                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  "Дата: $date",
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
                     color: Colors.grey[600],
                   ),
                 ),
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.edit, size: 20),
-            color: Colors.grey[400],
-            onPressed: () {
-              // Логика редактирования адреса
-            },
-          ),
-        ],
-      ),
-    );
-  }
-  
-  Widget _buildPaymentMethodItem(PaymentMethod method) {
-    // Определяем иконку в зависимости от типа платежа
-    IconData icon;
-    switch (method.type) {
-      case PaymentType.card:
-        icon = Icons.credit_card;
-        break;
-      case PaymentType.applepay:
-        icon = Icons.apple;
-        break;
-      case PaymentType.googlepay:
-        icon = Icons.g_mobiledata;
-        break;
-      case PaymentType.cash:
-      default:
-        icon = Icons.money;
-        break;
-    }
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: method.isDefault ? Colors.deepOrange.withOpacity(0.3) : Colors.grey.shade200,
-          width: method.isDefault ? 2 : 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              icon,
-              color: method.isDefault ? Colors.deepOrange : Colors.grey[700],
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      method.title,
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    if (method.isDefault)
-                      Container(
-                        margin: const EdgeInsets.only(left: 8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.deepOrange.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'По умолчанию',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.deepOrange,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                  ],
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                amount,
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.deepOrange,
                 ),
-                const SizedBox(height: 4),
-                if (method.type == PaymentType.card)
-                  Text(
-                    '•••• •••• •••• ${method.last4}',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  status,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: statusColor,
+                    fontWeight: FontWeight.w500,
                   ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_vert, size: 20),
-            color: Colors.grey[400],
-            onPressed: () {
-              // Показываем опции для карты
-            },
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
   
-  Widget _buildOrderItem(Order order) {
-    // Определяем цвет статуса
-    Color statusColor;
-    switch (order.status) {
-      case OrderStatus.delivered:
-        statusColor = Colors.green;
-        break;
-      case OrderStatus.delivering:
-        statusColor = Colors.blue;
-        break;
-      case OrderStatus.cancelled:
-        statusColor = Colors.red;
-        break;
-      case OrderStatus.pending:
-      default:
-        statusColor = Colors.orange;
-        break;
-    }
-    
+  Widget _buildFavoriteItem({
+    required String name,
+    required String imageUrl,
+    required double rating,
+    required String category,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -668,290 +519,105 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () {
-            // Переход к деталям заказа
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(12),
+              bottomLeft: Radius.circular(12),
+            ),
+            child: Image.network(
+              imageUrl,
+              width: 80,
+              height: 80,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 80,
+                  height: 80,
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.restaurant, color: Colors.white),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Заказ #${order.id}',
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        order.statusText,
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: statusColor,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
                 Text(
-                  'Дата: ${order.createdAt.toString().substring(0, 10)}',
+                  name,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  category,
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     color: Colors.grey[600],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Сумма: ${order.totalAmount.toStringAsFixed(0)} ₽',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.deepOrange,
-                  ),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.star,
+                      color: Colors.amber,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      rating.toString(),
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEditForm(User user) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            offset: const Offset(0, 4),
-            blurRadius: 10,
+          IconButton(
+            icon: const Icon(
+              Icons.favorite,
+              color: Colors.red,
+            ),
+            onPressed: () {
+              // Убрать из избранного
+            },
           ),
         ],
       ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.deepOrange.withOpacity(0.2),
-                        width: 4,
-                      ),
-                    ),
-                    child: CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Colors.grey[200],
-                      backgroundImage: user.avatarUrl != null
-                          ? NetworkImage(user.avatarUrl!)
-                          : null,
-                      child: user.avatarUrl == null
-                          ? Text(
-                              user.name.substring(0, 1).toUpperCase(),
-                              style: GoogleFonts.poppins(
-                                fontSize: 40,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.deepOrange,
-                              ),
-                            )
-                          : null,
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.deepOrange,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white,
-                          width: 2,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            
-            // Поля формы
-            Text(
-              'Имя',
+    );
+  }
+  
+  Widget _buildSettingsItem({
+    required String title,
+    required IconData icon,
+    required Widget trailing,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: Colors.grey[700],
+            size: 22,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              title,
               style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[700],
+                fontSize: 16,
               ),
             ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                hintText: 'Введите ваше имя',
-                filled: true,
-                fillColor: Colors.grey[100],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                prefixIcon: const Icon(Icons.person_outline),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Пожалуйста, введите имя';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            
-            Text(
-              'Email',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[700],
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                hintText: 'Введите ваш email',
-                filled: true,
-                fillColor: Colors.grey[100],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                prefixIcon: const Icon(Icons.email_outlined),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Пожалуйста, введите email';
-                }
-                if (!value.contains('@')) {
-                  return 'Введите корректный email';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            
-            Text(
-              'Номер телефона',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[700],
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                hintText: 'Введите номер телефона',
-                filled: true,
-                fillColor: Colors.grey[100],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                prefixIcon: const Icon(Icons.phone_outlined),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Пожалуйста, введите номер телефона';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 32),
-            
-            // Кнопки
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _toggleEditMode,
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      side: const BorderSide(color: Colors.deepOrange),
-                    ),
-                    child: Text(
-                      'Отмена',
-                      style: GoogleFonts.poppins(
-                        color: Colors.deepOrange,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _saveProfile,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepOrange,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      'Сохранить',
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+          ),
+          trailing,
+        ],
       ),
     );
   }
