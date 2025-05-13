@@ -106,7 +106,7 @@ class PromoCode {
       case PromoCodeType.percentage:
         return '${value.toInt()}% скидка';
       case PromoCodeType.fixed:
-        return '${value.toInt()} ₽ скидка';
+        return '${value.toInt()} ₸ скидка';
       case PromoCodeType.freeDelivery:
         return 'Бесплатная доставка';
       case PromoCodeType.freeItem:

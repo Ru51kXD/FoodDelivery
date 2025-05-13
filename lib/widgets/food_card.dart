@@ -125,7 +125,7 @@ class FoodCard extends StatelessWidget {
                       ),
                     Expanded(
                       child: Text(
-                        '${_safeIntPrice(foodItem.price)} ₽',
+                        '${_safeIntPrice(foodItem.price)} ₸',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -263,7 +263,7 @@ class FoodCard extends StatelessWidget {
                         ],
                       ),
                       Text(
-                        '${_safeIntPrice(foodItem.price)} ₽',
+                        '${_safeIntPrice(foodItem.price)} ₸',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

@@ -145,7 +145,7 @@ class _CartItemCardState extends State<CartItemCard> with SingleTickerProviderSt
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              '${widget.cartItem.food.price.toStringAsFixed(0)} ₽',
+                              '${widget.cartItem.food.price.toStringAsFixed(0)} ₸',
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
                                 color: Colors.deepOrange,
@@ -291,7 +291,7 @@ class _CartItemCardState extends State<CartItemCard> with SingleTickerProviderSt
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            '${widget.cartItem.totalPrice.toStringAsFixed(0)} ₽',
+                            '${widget.cartItem.totalPrice.toStringAsFixed(0)} ₸',
                             style: GoogleFonts.poppins(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,

@@ -166,7 +166,7 @@ class PromotionsScreen extends StatelessWidget {
                   if (promotion.minOrderAmount != null) ...[
                     const SizedBox(height: 12),
                     Text(
-                      'Минимальная сумма заказа: ${promotion.minOrderAmount!.toInt()} ₽',
+                      'Минимальная сумма заказа: ${promotion.minOrderAmount!.toInt()} ₸',
                       style: GoogleFonts.roboto(
                         fontSize: 14,
                         color: Colors.grey[600],

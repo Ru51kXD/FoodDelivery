@@ -176,7 +176,7 @@ class MinimalistFoodCard extends StatelessWidget {
                         
                         // Цена
                         Text(
-                          '${price.toInt()} ₽',
+                          '${price.toInt()} ₸',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,

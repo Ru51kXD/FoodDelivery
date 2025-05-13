@@ -217,7 +217,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           ),
                         ),
                         Text(
-                          '${item.totalPrice} ₽',
+                          '${item.totalPrice} ₸',
                           style: GoogleFonts.poppins(
                             fontWeight: FontWeight.w500,
                           ),
@@ -238,7 +238,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ),
                   ),
                   Text(
-                    '${order.totalAmount} ₽',
+                    '${order.totalAmount} ₸',
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,

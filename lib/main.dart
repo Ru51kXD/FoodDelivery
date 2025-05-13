@@ -18,6 +18,9 @@ import 'screens/splash_screen.dart';
 import 'screens/auth/welcome_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/delivery_address_screen.dart';
+import 'screens/payment_methods_screen.dart';
+import 'screens/bonus_program_screen.dart';
 
 // Добавляем глобальный обработчик исключений
 FlutterErrorDetails? _lastErrorDetails;
@@ -218,111 +221,40 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Ленивая загрузка тем и локализаций
     return MultiProvider(
       providers: [
-        // Используем lazy: false только для критичных провайдеров
-        ChangeNotifierProvider(
-          create: (ctx) => FoodProvider(),
-          lazy: false,
-        ),
-        // Остальные провайдеры инициализируем лениво
-        ChangeNotifierProvider(
-          create: (ctx) => UserProvider(),
-          lazy: true,
-        ),
-        ChangeNotifierProvider(
-          create: (ctx) => CartProvider(),
-          lazy: true,
-        ),
+        ChangeNotifierProvider(create: (_) => FoodProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
-      child: MaterialApp(
-        title: 'Доставка еды',
-        debugShowCheckedModeBanner: false,
-        // Отключаем некоторые тяжелые эффекты на эмуляторе
-        showPerformanceOverlay: false,
-        checkerboardRasterCacheImages: false,
-        checkerboardOffscreenLayers: false,
-        theme: ThemeData(
-          primarySwatch: Colors.deepOrange,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.deepOrange,
-            primary: Colors.deepOrange,
-            secondary: Colors.amber,
-          ),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.white,
-            elevation: 0,
-            centerTitle: true,
-            iconTheme: IconThemeData(color: Colors.black),
-            titleTextStyle: TextStyle(
-              color: Colors.black,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+      builder: (context, _) {
+        // Отключаем отладочную сетку в режиме релиза
+        return MaterialApp(
+          title: 'Доставка еды',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSwatch().copyWith(
+              primary: Colors.deepOrange,
+              secondary: Colors.deepOrangeAccent,
             ),
-          ),
-          scaffoldBackgroundColor: Colors.grey[50],
-          // Используем системный шрифт для лучшей производительности
-          fontFamily: 'Roboto',
-          // Оптимизация для быстрого отображения
-          useMaterial3: true,
-          // Оптимизируем анимации
-          pageTransitionsTheme: const PageTransitionsTheme(
-            builders: {
-              TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-            },
-          ),
-          // Уменьшаем дрожание текста
-          textTheme: Typography.material2018().black.apply(
+            scaffoldBackgroundColor: Colors.white,
             fontFamily: 'Roboto',
+            useMaterial3: true,
           ),
-        ),
-        builder: (context, child) {
-          // Отключаем бросание ошибок при плохом сетевом соединении
-          ErrorWidget.builder = (FlutterErrorDetails details) {
-            // Игнорируем OpenGL ошибки на эмуляторе
-            if (_isEmulator && 
-                (details.exception.toString().contains('OpenGL') ||
-                details.exception.toString().contains('GL_') ||
-                details.exception.toString().contains('EGL'))) {
-              return Container(
-                color: Colors.grey[100],
-                child: const Center(
-                  child: Text('Загрузка изображения...'),
-                ),
-              );
-            }
-            
-            // В релизе показываем пользовательское сообщение об ошибке
-            if (kReleaseMode) {
-              return Container(
-                padding: const EdgeInsets.all(16),
-                alignment: Alignment.center,
-                child: const Text(
-                  'Что-то пошло не так, пожалуйста, попробуйте еще раз.',
-                  style: TextStyle(color: Colors.red),
-                ),
-              );
-            }
-            // В дебаге показываем ошибку как есть
-            return ErrorWidget(details.exception);
-          };
-          
-          return MediaQuery(
-            // Отключаем анимацию масштабирования текста
-            data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
-            child: child!,
-          );
-        },
-        // Определяем начальный экран как экран проверки аутентификации
-        home: const AuthCheckScreen(),
-        routes: {
-          '/register': (context) => const RegisterScreen(),
-          '/login': (context) => const LoginScreen(),
-          '/home': (context) => const HomeScreen(),
-          '/welcome': (context) => const WelcomeScreen(),
-        },
-      ),
+          routes: {
+            '/': (context) => const SplashScreen(),
+            '/welcome': (context) => const WelcomeScreen(),
+            '/register': (context) => const RegisterScreen(),
+            '/login': (context) => const LoginScreen(),
+            '/home': (context) => const HomeScreen(),
+            '/delivery_addresses': (context) => const DeliveryAddressScreen(),
+            '/payment_methods': (context) => const PaymentMethodsScreen(),
+            '/bonus_program': (context) => const BonusProgramScreen(),
+          },
+          initialRoute: '/',
+        );
+      },
     );
   }
 }

@@ -221,13 +221,13 @@ class CartScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _buildSummaryItem('Сумма заказа', '${cartProvider.totalPrice.toStringAsFixed(0)} ₽', false),
-                _buildSummaryItem('Доставка', '150 ₽', false),
-                _buildSummaryItem('Сервисный сбор', '50 ₽', false),
+                _buildSummaryItem('Сумма заказа', '${cartProvider.totalPrice.toStringAsFixed(0)} ₸', false),
+                _buildSummaryItem('Доставка', '150 ₸', false),
+                _buildSummaryItem('Сервисный сбор', '50 ₸', false),
                 const SizedBox(height: 8),
                 const Divider(thickness: 1),
                 const SizedBox(height: 8),
-                _buildSummaryItem('Итого', '${(cartProvider.totalPrice + 200).toStringAsFixed(0)} ₽', true),
+                _buildSummaryItem('Итого', '${(cartProvider.totalPrice + 200).toStringAsFixed(0)} ₸', true),
                 const SizedBox(height: 100), // Отступ для нижней панели
               ],
             ),
@@ -342,7 +342,7 @@ class CartScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${item.food.price.toStringAsFixed(0)} ₽',
+                      '${item.food.price.toStringAsFixed(0)} ₸',
                       style: GoogleFonts.poppins(
                         color: Colors.deepOrange,
                         fontWeight: FontWeight.w600,
@@ -385,7 +385,7 @@ class CartScreen extends StatelessWidget {
                         
                         // Итоговая стоимость
                         Text(
-                          '${(item.food.price * item.quantity).toStringAsFixed(0)} ₽',
+                          '${(item.food.price * item.quantity).toStringAsFixed(0)} ₸',
                           style: GoogleFonts.poppins(
                             fontWeight: FontWeight.bold,
                           ),
@@ -478,7 +478,7 @@ class CartScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '${food.price.toStringAsFixed(0)} ₽',
+                                      '${food.price.toStringAsFixed(0)} ₸',
                                       style: GoogleFonts.poppins(
                                         color: Colors.deepOrange,
                                         fontWeight: FontWeight.w600,
@@ -606,7 +606,7 @@ class CartScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${(cartProvider.totalPrice + 200).toStringAsFixed(0)} ₽',
+                  '${(cartProvider.totalPrice + 200).toStringAsFixed(0)} ₸',
                   style: GoogleFonts.poppins(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,

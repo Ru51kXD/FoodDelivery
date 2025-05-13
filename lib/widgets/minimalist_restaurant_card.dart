@@ -145,7 +145,7 @@ class MinimalistRestaurantCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            deliveryFee > 0 ? '${deliveryFee.toInt()} ₽' : 'Бесплатно',
+                            deliveryFee > 0 ? '${deliveryFee.toInt()} ₸' : 'Бесплатно',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[800],

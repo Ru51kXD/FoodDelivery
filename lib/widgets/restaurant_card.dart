@@ -164,7 +164,7 @@ class RestaurantCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       restaurant.deliveryFee > 0 
-                          ? '${restaurant.deliveryFee.toInt()} ₽'
+                          ? '${restaurant.deliveryFee.toInt()} ₸'
                           : 'Бесплатно',
                       style: TextStyle(
                         fontSize: 12,

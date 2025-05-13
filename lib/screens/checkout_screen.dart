@@ -462,15 +462,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   const SizedBox(height: 16),
                   
                   // Итоговая информация
-                  _buildOrderInfoItem('Товары (${cartProvider.itemCount})', '${_getSubtotal().toStringAsFixed(0)} ₽'),
-                  _buildOrderInfoItem('Доставка', '${_getDeliveryFee().toStringAsFixed(0)} ₽'),
-                  _buildOrderInfoItem('Сервисный сбор', '${_getServiceFee().toStringAsFixed(0)} ₽'),
+                  _buildOrderInfoItem('Товары (${cartProvider.itemCount})', '${_getSubtotal().toStringAsFixed(0)} ₸'),
+                  _buildOrderInfoItem('Доставка', '${_getDeliveryFee().toStringAsFixed(0)} ₸'),
+                  _buildOrderInfoItem('Сервисный сбор', '${_getServiceFee().toStringAsFixed(0)} ₸'),
                   
                   // Скидки
                   if (_calculateDiscount() > 0) ...[
                     _buildOrderInfoItem(
                       'Скидка',
-                      '-${_calculateDiscount().toStringAsFixed(0)} ₽',
+                      '-${_calculateDiscount().toStringAsFixed(0)} ₸',
                       isDiscount: true,
                     ),
                   ],
@@ -478,7 +478,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   const Divider(height: 32),
                   _buildOrderInfoItem(
                     'Итого',
-                    '${_getTotal().toStringAsFixed(0)} ₽',
+                    '${_getTotal().toStringAsFixed(0)} ₸',
                     isBold: true,
                   ),
                   const SizedBox(height: 40),
@@ -636,18 +636,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                     child: Column(
                       children: [
-                        _buildPriceRow('Сумма заказа', '${subtotal.toStringAsFixed(0)} ₽'),
-                        _buildPriceRow('Доставка', '99 ₽'),
+                        _buildPriceRow('Сумма заказа', '${subtotal.toStringAsFixed(0)} ₸'),
+                        _buildPriceRow('Доставка', '99 ₸'),
                         if (_isPromoValid)
                           _buildPriceRow(
                             'Скидка',
-                            '- ${((subtotal + 99) * _promoDiscount / 100).toStringAsFixed(0)} ₽',
+                            '- ${((subtotal + 99) * _promoDiscount / 100).toStringAsFixed(0)} ₸',
                             valueColor: Colors.green,
                           ),
                         const Divider(),
                         _buildPriceRow(
                           'Итого',
-                          '${total.toStringAsFixed(0)} ₽',
+                          '${total.toStringAsFixed(0)} ₸',
                           isBold: true,
                         ),
                       ],

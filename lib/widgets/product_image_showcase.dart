@@ -128,7 +128,7 @@ class ProductImageShowcase extends StatelessWidget {
               ],
             ),
             child: Text(
-              '${price.toStringAsFixed(0)} ₽',
+              '${price.toStringAsFixed(0)} ₸',
               style: GoogleFonts.poppins(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,

@@ -204,12 +204,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: Colors.white.withOpacity(0.8),
                         ),
                       ),
-                      Text(
-                        "Подробнее >",
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(context, '/bonus_program');
+                        },
+                        child: Text(
+                          "Подробнее >",
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ],
@@ -230,21 +235,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     orderNumber: "1234",
                     date: "12.06.2023",
                     status: "Доставлен",
-                    amount: "1 250 ₽",
+                    amount: "1 250 ₸",
                     statusColor: Colors.green,
                   ),
                   _buildOrderItem(
                     orderNumber: "1233",
                     date: "05.06.2023",
                     status: "Доставлен",
-                    amount: "990 ₽",
+                    amount: "990 ₸",
                     statusColor: Colors.green,
                   ),
                   _buildOrderItem(
                     orderNumber: "1232",
                     date: "01.06.2023",
                     status: "Доставлен",
-                    amount: "1 550 ₽",
+                    amount: "1 550 ₸",
                     statusColor: Colors.green,
                   ),
                   Center(
@@ -316,28 +321,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: "Адреса доставки",
                     icon: Icons.location_on_outlined,
                     trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.pushNamed(context, '/delivery_addresses');
+                    },
                   ),
                   _buildSettingsItem(
                     title: "Способы оплаты",
                     icon: Icons.payment_outlined,
                     trailing: const Icon(Icons.chevron_right),
-                  ),
-                  _buildSettingsItem(
-                    title: "Язык приложения",
-                    icon: Icons.language_outlined,
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          "Русский",
-                          style: GoogleFonts.poppins(
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.chevron_right),
-                      ],
-                    ),
+                    onTap: () {
+                      Navigator.pushNamed(context, '/payment_methods');
+                    },
                   ),
                 ],
               ),
@@ -655,27 +649,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String title,
     required IconData icon,
     required Widget trailing,
+    VoidCallback? onTap,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            color: Colors.grey[700],
-            size: 22,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              title,
-              style: GoogleFonts.poppins(
-                fontSize: 16,
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: Colors.grey[700],
+              size: 22,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                ),
               ),
             ),
-          ),
-          trailing,
-        ],
+            trailing,
+          ],
+        ),
       ),
     );
   }

@@ -167,7 +167,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                     ),
                     const Spacer(),
                     Text(
-                      '${dish.price.toStringAsFixed(0)} ₽',
+                      '${dish.price.toStringAsFixed(0)} ₸',
                       style: GoogleFonts.roboto(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,

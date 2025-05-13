@@ -349,7 +349,7 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
                     const SizedBox(width: 8),
                     Text(
                       _restaurant!.deliveryFee > 0
-                          ? '${_restaurant!.deliveryFee.toInt()} ₽'
+                          ? '${_restaurant!.deliveryFee.toInt()} ₸'
                           : 'Бесплатная доставка',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
@@ -406,7 +406,7 @@ class _RestaurantDetailsScreenState extends State<RestaurantDetailsScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Минимальная сумма заказа: ${_restaurant!.minOrderAmount.toInt()} ₽',
+                          'Минимальная сумма заказа: ${_restaurant!.minOrderAmount.toInt()} ₸',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.blue,

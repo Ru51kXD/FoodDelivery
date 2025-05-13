@@ -96,7 +96,7 @@ class PromotionCard extends StatelessWidget {
                   if (promotion.minOrderAmount != null) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Минимальная сумма заказа: ${promotion.minOrderAmount} ₽',
+                      'Минимальная сумма заказа: ${promotion.minOrderAmount} ₸',
                       style: GoogleFonts.roboto(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,

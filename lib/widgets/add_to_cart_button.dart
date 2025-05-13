@@ -87,7 +87,7 @@ class _AddToCartButtonState extends State<AddToCartButton> with SingleTickerProv
                   ),
                 ),
                 Text(
-                  '${widget.price.toStringAsFixed(0)} ₽/шт',
+                  '${widget.price.toStringAsFixed(0)} ₸/шт',
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -207,7 +207,7 @@ class _AddToCartButtonState extends State<AddToCartButton> with SingleTickerProv
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        'Добавить ${(widget.price * widget.quantity).toStringAsFixed(0)} ₽',
+                                        'Добавить ${(widget.price * widget.quantity).toStringAsFixed(0)} ₸',
                                         style: GoogleFonts.poppins(
                                           color: Colors.white,
                                           fontSize: 16,

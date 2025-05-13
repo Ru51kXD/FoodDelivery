@@ -103,7 +103,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                   
                   // Диапазон цен
                   Text(
-                    'Максимальная цена: ${_maxPrice.toInt()} ₽',
+                    'Максимальная цена: ${_maxPrice.toInt()} ₸',
                     style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,

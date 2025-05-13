@@ -150,63 +150,43 @@ class User {
 
 class Address {
   final String id;
-  final String title; // например, "Дом" или "Работа"
-  final String fullAddress;
   final String street;
-  final String city;
-  final String postalCode;
-  final String country;
+  final String house;
   final String? apartment;
-  final String? floor;
   final String? entrance;
-  final String? buildingCode;
-  final Map<String, double>? coordinates;
+  final int? floor;
+  final String? note;
   final bool isDefault;
   
   Address({
     required this.id,
-    required this.title,
-    required this.fullAddress,
     required this.street,
-    required this.city,
-    required this.postalCode,
-    required this.country,
+    required this.house,
     this.apartment,
-    this.floor,
     this.entrance,
-    this.buildingCode,
-    this.coordinates,
+    this.floor,
+    this.note,
     this.isDefault = false,
   });
   
   Address copyWith({
     String? id,
-    String? title,
-    String? fullAddress,
     String? street,
-    String? city,
-    String? postalCode,
-    String? country,
+    String? house,
     String? apartment,
-    String? floor,
     String? entrance,
-    String? buildingCode,
-    Map<String, double>? coordinates,
+    int? floor,
+    String? note,
     bool? isDefault,
   }) {
     return Address(
       id: id ?? this.id,
-      title: title ?? this.title,
-      fullAddress: fullAddress ?? this.fullAddress,
       street: street ?? this.street,
-      city: city ?? this.city,
-      postalCode: postalCode ?? this.postalCode,
-      country: country ?? this.country,
+      house: house ?? this.house,
       apartment: apartment ?? this.apartment,
-      floor: floor ?? this.floor,
       entrance: entrance ?? this.entrance,
-      buildingCode: buildingCode ?? this.buildingCode,
-      coordinates: coordinates ?? this.coordinates,
+      floor: floor ?? this.floor,
+      note: note ?? this.note,
       isDefault: isDefault ?? this.isDefault,
     );
   }
@@ -214,19 +194,12 @@ class Address {
   factory Address.fromJson(Map<String, dynamic> json) {
     return Address(
       id: json['id'],
-      title: json['title'],
-      fullAddress: json['fullAddress'],
       street: json['street'],
-      city: json['city'],
-      postalCode: json['postalCode'],
-      country: json['country'],
+      house: json['house'],
       apartment: json['apartment'],
-      floor: json['floor'],
       entrance: json['entrance'],
-      buildingCode: json['buildingCode'],
-      coordinates: json['coordinates'] != null
-          ? Map<String, double>.from(json['coordinates'])
-          : null,
+      floor: json['floor'] != null ? json['floor'] as int : null,
+      note: json['note'],
       isDefault: json['isDefault'] ?? false,
     );
   }
@@ -234,17 +207,12 @@ class Address {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'title': title,
-      'fullAddress': fullAddress,
       'street': street,
-      'city': city,
-      'postalCode': postalCode,
-      'country': country,
+      'house': house,
       'apartment': apartment,
-      'floor': floor,
       'entrance': entrance,
-      'buildingCode': buildingCode,
-      'coordinates': coordinates,
+      'floor': floor,
+      'note': note,
       'isDefault': isDefault,
     };
   }
