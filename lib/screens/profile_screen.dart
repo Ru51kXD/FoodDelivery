@@ -351,7 +351,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: ElevatedButton(
                 onPressed: () {
                   // Выход из аккаунта
-                  Navigator.pop(context);
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text('Выход'),
+                      content: Text('Вы действительно хотите выйти из аккаунта?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text('Отмена'),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            Navigator.pop(context); // Закрываем диалог
+                            
+                            // Показываем индикатор загрузки
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (BuildContext context) {
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    color: Colors.deepOrange,
+                                  ),
+                                );
+                              },
+                            );
+                            
+                            final userProvider = Provider.of<UserProvider>(context, listen: false);
+                            // Используем timeout чтобы не зависало бесконечно
+                            await userProvider.logout().timeout(
+                              const Duration(seconds: 2),
+                              onTimeout: () {
+                                print("Выход из аккаунта прерван по таймауту");
+                              }
+                            );
+                            
+                            // Сбрасываем состояние приложения
+                            userProvider.resetApplicationState();
+                            
+                            // Закрываем индикатор загрузки если он открыт
+                            if (Navigator.canPop(context)) {
+                              Navigator.pop(context);
+                            }
+                            
+                            // После выхода навигация на экран авторизации
+                            if (!mounted) return;
+                            
+                            // Используем более безопасный способ навигации
+                            Navigator.pushNamedAndRemoveUntil(
+                              context, 
+                              '/register', 
+                              (route) => false
+                            );
+                          },
+                          child: Text('Выйти'),
+                        ),
+                      ],
+                    ),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red.shade50,

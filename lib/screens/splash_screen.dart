@@ -4,6 +4,7 @@ import '../providers/food_provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/user_provider.dart';
 import 'home_screen.dart';
+import 'auth/register_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -96,13 +97,22 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         _statusMessage = "Готово!";
       });
       
-      // Переход на главный экран после инициализации и анимации
+      // Добавляем небольшую задержку для полного отображения анимации
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
+        // Проверяем авторизован ли пользователь
+        if (userProvider.isLoggedIn && userProvider.user?.email != 'guest@example.com') {
+          // Если пользователь авторизован, переходим на главный экран
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          );
+        } else {
+          // Если пользователь не авторизован, переходим на экран регистрации
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const RegisterScreen()),
+          );
+        }
       }
     } catch (error) {
       setState(() {

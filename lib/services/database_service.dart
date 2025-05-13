@@ -685,6 +685,26 @@ class DatabaseService {
     }
   }
   
+  // Очистка данных текущей сессии пользователя
+  Future<void> clearUserSession() async {
+    try {
+      final db = await database;
+      
+      // Пробуем выполнить запрос с таймаутом
+      await db.transaction((txn) async {
+        // Не удаляем пользователя из базы, но можем очистить некоторые данные
+        await txn.rawQuery('DELETE FROM cart_items');
+        print("Корзина пользователя очищена");
+      }).timeout(const Duration(seconds: 1));
+      
+      return;
+    } catch (e) {
+      print("Ошибка при очистке сессии пользователя: $e");
+      // Возвращаем управление даже в случае ошибки
+      return;
+    }
+  }
+  
   // CLEANUP - Освобождение ресурсов БД при завершении работы
   Future<void> close() async {
     try {

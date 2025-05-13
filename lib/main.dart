@@ -14,6 +14,7 @@ import 'providers/cart_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/loading_screen.dart';
 import 'widgets/safe_image.dart';
+import 'screens/splash_screen.dart';
 import 'screens/auth/welcome_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/login_screen.dart';
@@ -313,80 +314,14 @@ class MyApp extends StatelessWidget {
             child: child!,
           );
         },
-        // Определяем начальный экран как экран загрузки, который затем перейдет на регистрацию
-        home: const SplashScreen(),
+        // Определяем начальный экран как экран проверки аутентификации
+        home: const AuthCheckScreen(),
         routes: {
           '/register': (context) => const RegisterScreen(),
           '/login': (context) => const LoginScreen(),
           '/home': (context) => const HomeScreen(),
           '/welcome': (context) => const WelcomeScreen(),
         },
-      ),
-    );
-  }
-}
-
-// Экран загрузки, который переходит на экран регистрации
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
-
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Просто небольшая задержка для отображения сплеш-экрана
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (!mounted) return;
-      // Переходим на экран регистрации
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const RegisterScreen()),
-      );
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.deepOrange.shade400,
-              Colors.deepOrange.shade700,
-            ],
-          ),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.fastfood,
-                size: 80.0,
-                color: Colors.white,
-              ),
-              const SizedBox(height: 24.0),
-              const Text(
-                'Доставка еды',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24.0,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 48.0),
-              const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

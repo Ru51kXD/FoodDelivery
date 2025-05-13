@@ -30,6 +30,11 @@ class CartProvider with ChangeNotifier {
   String? get error => _error;
   bool get isEmpty => _items.isEmpty;
   
+  // Публичный метод инициализации корзины для LoadingScreen
+  Future<void> initCart() async {
+    return _loadCart();
+  }
+  
   // Загрузка корзины
   Future<void> _loadCart() async {
     _isLoading = true;

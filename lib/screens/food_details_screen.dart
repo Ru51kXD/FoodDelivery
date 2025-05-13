@@ -244,6 +244,9 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
           // Основной контент
           CustomScrollView(
             controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
             slivers: [
               // Шапка с изображением
               SliverToBoxAdapter(
@@ -436,6 +439,11 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
                   ),
                 ),
               ),
+              
+              // Добавляем дополнительное пространство внизу для обеспечения полной прокрутки
+              SliverPadding(
+                padding: const EdgeInsets.only(bottom: 150),
+              ),
             ],
           ),
           
@@ -448,9 +456,13 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
               decoration: BoxDecoration(
                 color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withOpacity(0.1),
                     blurRadius: 10,
                     spreadRadius: 1,
                     offset: const Offset(0, -2),

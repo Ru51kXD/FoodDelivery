@@ -61,13 +61,30 @@ class FoodProvider with ChangeNotifier {
     // Загружаем мок-данные моментально для быстрого отображения UI
     _loadMockData();
     
-    // Сокращаем число обновлений UI
+    // Сразу отмечаем как инициализированное и завершаем загрузку
     _isLoading = false;
     _hasInitializedData = true;
+    _isPopulatingDatabase = false;
+    _databasePopulationProgress = 1.0;
     notifyListeners();
     
-    // Асинхронно загружаем данные из БД без использования изолята
-    _loadInitialDataFromDatabase();
+    // Только после этого пытаемся инициализировать базу данных в фоне
+    // причем без блокировки основного потока
+    Future.microtask(() async {
+      try {
+        // Оборачиваем в короткий таймаут, чтобы не тормозить приложение
+        await _loadInitialDataFromDatabase().timeout(
+          const Duration(seconds: 1),
+          onTimeout: () {
+            print("Database loading timed out, using mock data only");
+            return;
+          }
+        );
+      } catch (e) {
+        print("Error during database initialization: $e");
+        // Ошибки не блокируют работу приложения, т.к. мок-данные уже загружены
+      }
+    });
   }
   
   // Загрузка мок-данных

@@ -1,16 +1,193 @@
-# food_delivery_app
+# FoodDelivery - Приложение для доставки еды
 
-A new Flutter project.
+Мобильное приложение для заказа и доставки еды с поддержкой различных ресторанов, блюд и системой аутентификации.
 
-## Getting Started
+## Скриншоты
 
-This project is a starting point for a Flutter application.
+![Скриншот приложения](screenshots/screenshot.png)
 
-A few resources to get you started if this is your first Flutter project:
+## Требования
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Для запуска проекта вам потребуется:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Flutter SDK 3.0.0 или выше
+- Dart 2.17.0 или выше
+- Android Studio / VS Code с плагином Flutter и Dart
+- Эмулятор Android или iOS / физическое устройство
+- Git для клонирования репозитория
+
+## Установка и запуск проекта
+
+### Шаг 1: Установка Flutter SDK
+
+1. Скачайте и установите Flutter SDK с официального сайта: [flutter.dev](https://flutter.dev/docs/get-started/install)
+2. Добавьте Flutter в переменную PATH вашей системы
+3. Проверьте установку, выполнив команду:
+   ```
+   flutter doctor
+   ```
+4. Устраните все проблемы, выявленные командой `flutter doctor`
+
+### Шаг 2: Клонирование репозитория
+
+```bash
+git clone https://github.com/yourusername/FoodDelivery.git
+cd FoodDelivery
+```
+
+### Шаг 3: Установка зависимостей
+
+```bash
+flutter pub get
+```
+
+### Шаг 4: Запуск проекта
+
+```bash
+flutter run
+```
+
+Для запуска в режиме дебаг:
+```bash
+flutter run --debug
+```
+
+Для запуска в release-режиме:
+```bash
+flutter run --release
+```
+
+## Возможные проблемы и их решение
+
+### Ошибка "unable to find directory entry in pubspec.yaml"
+
+Если вы получаете ошибку: "Error: unable to find directory entry in pubspec.yaml: assets/images/", это означает, что Flutter не может найти директорию с ассетами. Чтобы исправить:
+
+1. Откройте файл `pubspec.yaml`
+2. Добавьте следующие строки в раздел `flutter`:
+
+```yaml
+flutter:
+  assets:
+    - assets/images/
+```
+
+3. Создайте директорию `assets/images` в корне проекта:
+
+```bash
+mkdir -p assets/images
+```
+
+4. Перезапустите приложение:
+
+```bash
+flutter clean
+flutter pub get
+flutter run
+```
+
+## Архитектура приложения
+
+Приложение FoodDelivery построено с использованием архитектуры Provider для управления состоянием. Основные компоненты:
+
+### Модели (models/)
+- `Food` - модель блюда
+- `Restaurant` - модель ресторана
+- `User` - модель пользователя
+- `CartItem` - модель элемента корзины
+
+### Провайдеры (providers/)
+- `FoodProvider` - управление данными о блюдах и ресторанах
+- `UserProvider` - управление аутентификацией и данными пользователя
+- `CartProvider` - управление корзиной покупок
+
+### Экраны (screens/)
+- `HomeScreen` - главный экран приложения
+- `AuthScreen` - экраны регистрации и входа
+- `FoodDetailsScreen` - экран детальной информации о блюде
+- `CartScreen` - экран корзины
+- `ProfileScreen` - экран профиля пользователя
+
+### Сервисы (services/)
+- `DatabaseService` - работа с локальной базой данных SQLite
+
+## Процесс аутентификации
+
+В приложении предусмотрены три способа работы:
+1. **Регистрация** - создание нового аккаунта
+2. **Вход** - авторизация для существующих пользователей 
+3. **Гостевой режим** - использование приложения без регистрации
+
+Процесс регистрации и входа проходит через экраны:
+- `RegisterScreen` - регистрация нового пользователя
+- `LoginScreen` - вход для существующих пользователей
+
+## Основные функции
+
+### Просмотр ресторанов и блюд
+- Просмотр списка популярных ресторанов
+- Просмотр списка популярных блюд
+- Фильтрация по категориям
+- Поиск ресторанов и блюд
+
+### Работа с корзиной
+- Добавление блюд в корзину
+- Изменение количества блюд
+- Добавление специальных инструкций к заказу
+- Оформление заказа
+
+### Профиль пользователя
+- Просмотр и редактирование профиля
+- История заказов
+- Избранные рестораны и блюда
+
+## Структура проекта
+
+```
+lib/
+├── data/
+│   └── mock_data.dart       # Моковые данные для тестирования
+├── models/                  # Модели данных
+│   ├── food.dart
+│   ├── restaurant.dart
+│   ├── user.dart
+│   └── cart_item.dart
+├── providers/               # Провайдеры состояния
+│   ├── food_provider.dart
+│   ├── user_provider.dart
+│   └── cart_provider.dart
+├── screens/                 # Экраны приложения
+│   ├── auth/
+│   │   ├── login_screen.dart
+│   │   ├── register_screen.dart
+│   │   └── welcome_screen.dart
+│   ├── home_screen.dart
+│   ├── food_details_screen.dart
+│   ├── cart_screen.dart
+│   └── profile_screen.dart
+├── services/                # Сервисы
+│   └── database_service.dart
+├── theme/                   # Темы и стили
+│   └── app_theme.dart
+├── widgets/                 # Повторно используемые виджеты
+│   ├── food_card.dart
+│   ├── restaurant_card.dart
+│   └── ...
+└── main.dart                # Точка входа в приложение
+```
+
+## База данных
+
+Приложение использует локальную базу данных SQLite для хранения:
+- Данных пользователя
+- Ресторанов и блюд
+- Избранных элементов
+- Истории заказов
+
+## Авторы
+
+- Ваше имя
+
+## Лицензия
+
+[MIT](LICENSE)

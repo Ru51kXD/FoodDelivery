@@ -79,17 +79,17 @@ class UserProvider with ChangeNotifier {
         isEmailVerified: false, // По умолчанию email не подтвержден
       );
       
-      // В реальном приложении здесь был бы запрос к API для регистрации
-      await Future.delayed(const Duration(milliseconds: 1000)); // Имитация задержки сети
+      // Минимальная задержка для имитации сетевого запроса
+      await Future.delayed(const Duration(milliseconds: 300));
       
-      try {
-        await _insertUser(newUser);
-      } catch (dbError) {
-        print("Ошибка при сохранении пользователя в БД: $dbError");
-        // Игнорируем ошибку БД, т.к. у нас есть объект пользователя в памяти
-      }
-      
+      // Пропускаем сохранение в БД в основном потоке
+      // и сразу устанавливаем пользователя
       _user = newUser;
+      
+      // Запускаем сохранение в БД в фоне без ожидания
+      _startBackgroundUserSave(newUser);
+      
+      print("Пользователь успешно зарегистрирован: ${newUser.name}");
     } catch (e) {
       _error = e.toString();
       print("Registration error: $e");
@@ -97,6 +97,23 @@ class UserProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+  
+  // Фоновое сохранение пользователя
+  void _startBackgroundUserSave(User user) {
+    Future(() async {
+      try {
+        await _insertUser(user).timeout(
+          const Duration(seconds: 1),
+          onTimeout: () {
+            print("Database operation timed out in background save");
+            return;
+          }
+        );
+      } catch (e) {
+        print("Background user save error: $e");
+      }
+    });
   }
   
   // Обновление информации о пользователе
@@ -283,11 +300,53 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
     
     try {
+      // Сначала полностью сбрасываем пользователя
       _user = null;
+      
+      // Для безопасности пытаемся очистить данные в базе
+      try {
+        // Не ждем ответа от базы чтобы не блокировать выход
+        _databaseService.clearUserSession().timeout(
+          const Duration(seconds: 1),
+          onTimeout: () {
+            print("Очистка сессии в БД прервана по таймауту");
+            return;
+          }
+        );
+      } catch (dbError) {
+        print("Ошибка при очистке сессии в БД: $dbError");
+        // Игнорируем ошибки с базой данных
+      }
+      
       // Создаем нового гостевого пользователя
+      await Future.delayed(const Duration(milliseconds: 100)); // Короткая пауза
       _user = _createDefaultUser();
+      
+      print("Пользователь успешно вышел из системы");
     } catch (e) {
       _error = e.toString();
+      print("Ошибка при выходе: $_error");
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+  
+  // Полный сброс состояния приложения
+  Future<void> resetApplicationState() async {
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      // Сбрасываем пользователя
+      _user = null;
+      
+      // Создаем нового гостевого пользователя
+      _user = _createDefaultUser();
+      
+      print("Состояние приложения полностью сброшено");
+    } catch (e) {
+      print("Ошибка при сбросе состояния: $e");
     } finally {
       _isLoading = false;
       notifyListeners();
