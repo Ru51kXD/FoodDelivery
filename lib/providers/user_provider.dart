@@ -62,6 +62,43 @@ class UserProvider with ChangeNotifier {
     );
   }
   
+  // Регистрация нового пользователя
+  Future<void> register(String name, String email, String password) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    
+    try {
+      // Создаем пользователя с указанным email и именем
+      final newUser = User(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: name,
+        email: email,
+        phone: '', // Можно добавить телефон при регистрации или позже
+        address: '', // Адрес можно добавить позже
+        isEmailVerified: false, // По умолчанию email не подтвержден
+      );
+      
+      // В реальном приложении здесь был бы запрос к API для регистрации
+      await Future.delayed(const Duration(milliseconds: 1000)); // Имитация задержки сети
+      
+      try {
+        await _insertUser(newUser);
+      } catch (dbError) {
+        print("Ошибка при сохранении пользователя в БД: $dbError");
+        // Игнорируем ошибку БД, т.к. у нас есть объект пользователя в памяти
+      }
+      
+      _user = newUser;
+    } catch (e) {
+      _error = e.toString();
+      print("Registration error: $e");
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+  
   // Обновление информации о пользователе
   Future<void> updateUser({
     required String name,
@@ -264,14 +301,38 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
     
     try {
-      // Создаем пользователя с указанным email - без обращения к БД
-      _user = User(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: 'Пользователь',
-        email: email,
-        phone: '+7 (999) 123-45-67',
-        address: 'Улица Примерная, 1',
-      );
+      // В реальном приложении здесь был бы запрос к API для аутентификации
+      await Future.delayed(const Duration(milliseconds: 1000)); // Имитация задержки сети
+      
+      // Проверяем, существует ли пользователь с таким email в БД
+      try {
+        final existingUser = await _databaseService.getUserByEmail(email);
+        if (existingUser != null) {
+          _user = existingUser;
+        } else {
+          // Если пользователь не найден в БД, используем временные данные
+          _user = User(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            name: 'Пользователь',
+            email: email,
+            phone: '+7 (999) 123-45-67',
+            address: 'Улица Примерная, 1',
+          );
+          
+          // Сохраняем пользователя в БД
+          await _insertUser(_user!);
+        }
+      } catch (dbError) {
+        print("Ошибка при работе с БД: $dbError");
+        // В случае ошибки БД создаем пользователя в памяти
+        _user = User(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          name: 'Пользователь',
+          email: email,
+          phone: '+7 (999) 123-45-67',
+          address: 'Улица Примерная, 1',
+        );
+      }
     } catch (e) {
       _error = e.toString();
       print("Login error: $e");

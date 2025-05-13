@@ -48,7 +48,18 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _loadRestaurants();
+    
+    // Инициализируем данные, если они еще не были проинициализированы
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final foodProvider = Provider.of<FoodProvider>(context, listen: false);
+      if (!foodProvider.hasInitializedData) {
+        foodProvider.initData().then((_) {
+          _loadRestaurants();
+        });
+      } else {
+        _loadRestaurants();
+      }
+    });
   }
   
   @override
@@ -174,8 +185,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final foodProvider = Provider.of<FoodProvider>(context, listen: false);
-      _restaurants = foodProvider.restaurants;
-      _filteredRestaurants = _restaurants;
+      
+      // Если данные ещё не загружены, принудительно инициализируем их
+      if (foodProvider.restaurants.isEmpty && !foodProvider.isLoading) {
+        await foodProvider.initData();
+      }
+      
+      // Ждем пока загрузятся рестораны
+      if (foodProvider.restaurants.isEmpty) {
+        await Future.delayed(Duration(milliseconds: 500));
+      }
+      
+      setState(() {
+        _restaurants = List.from(foodProvider.restaurants);
+        _filteredRestaurants = _restaurants;
+      });
+      
     } catch (e) {
       setState(() {
         _error = e.toString();

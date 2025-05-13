@@ -637,20 +637,39 @@ class DatabaseService {
   Future<User?> getCurrentUser() async {
     try {
       final db = await database;
-      final List<Map<String, dynamic>> maps = await db.query('users', limit: 1);
+      final List<Map<String, dynamic>> maps = await db.query('users');
       
-      if (maps.isEmpty) {
-        return null;
+      if (maps.isNotEmpty) {
+        return User.fromMap(maps.first);
       }
-      
-      return User.fromMap(maps.first);
+      return null;
     } catch (e) {
-      print("Error getting current user: $e");
+      print('Error in getCurrentUser: $e');
       return null;
     }
   }
   
-  // Обновление пользователя
+  // Получение пользователя по email
+  Future<User?> getUserByEmail(String email) async {
+    try {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.query(
+        'users',
+        where: 'email = ?',
+        whereArgs: [email],
+      );
+      
+      if (maps.isNotEmpty) {
+        return User.fromMap(maps.first);
+      }
+      return null;
+    } catch (e) {
+      print('Error in getUserByEmail: $e');
+      return null;
+    }
+  }
+  
+  // Обновление данных пользователя
   Future<void> updateUser(User user) async {
     try {
       final db = await database;
@@ -661,7 +680,8 @@ class DatabaseService {
         whereArgs: [user.id],
       );
     } catch (e) {
-      print("Error updating user: $e");
+      print('Error in updateUser: $e');
+      rethrow;
     }
   }
   

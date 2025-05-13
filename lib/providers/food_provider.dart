@@ -42,6 +42,7 @@ class FoodProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
   bool get hasMoreData => _hasMoreData;
+  bool get hasInitializedData => _hasInitializedData;
   String? get error => _error;
   double get databasePopulationProgress => _databasePopulationProgress;
   bool get isPopulatingDatabase => _isPopulatingDatabase;

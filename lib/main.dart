@@ -14,6 +14,9 @@ import 'providers/cart_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/loading_screen.dart';
 import 'widgets/safe_image.dart';
+import 'screens/auth/welcome_screen.dart';
+import 'screens/auth/register_screen.dart';
+import 'screens/auth/login_screen.dart';
 
 // Добавляем глобальный обработчик исключений
 FlutterErrorDetails? _lastErrorDetails;
@@ -310,7 +313,164 @@ class MyApp extends StatelessWidget {
             child: child!,
           );
         },
-        home: const OptimizedLoadingScreen(),
+        // Определяем начальный экран как экран загрузки, который затем перейдет на регистрацию
+        home: const SplashScreen(),
+        routes: {
+          '/register': (context) => const RegisterScreen(),
+          '/login': (context) => const LoginScreen(),
+          '/home': (context) => const HomeScreen(),
+          '/welcome': (context) => const WelcomeScreen(),
+        },
+      ),
+    );
+  }
+}
+
+// Экран загрузки, который переходит на экран регистрации
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Просто небольшая задержка для отображения сплеш-экрана
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (!mounted) return;
+      // Переходим на экран регистрации
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const RegisterScreen()),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.deepOrange.shade400,
+              Colors.deepOrange.shade700,
+            ],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.fastfood,
+                size: 80.0,
+                color: Colors.white,
+              ),
+              const SizedBox(height: 24.0),
+              const Text(
+                'Доставка еды',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24.0,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 48.0),
+              const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Экран для проверки аутентификации
+class AuthCheckScreen extends StatefulWidget {
+  const AuthCheckScreen({super.key});
+
+  @override
+  State<AuthCheckScreen> createState() => _AuthCheckScreenState();
+}
+
+class _AuthCheckScreenState extends State<AuthCheckScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+
+  Future<void> _checkAuth() async {
+    // Добавляем небольшую задержку для отображения сплеш-экрана
+    await Future.delayed(const Duration(milliseconds: 1000));
+
+    if (!mounted) return;
+    
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    await userProvider.init();
+    
+    if (!mounted) return;
+    
+    // Если пользователь аутентифицирован и это не гостевой аккаунт, 
+    // то переходим на главный экран, иначе на экран регистрации
+    if (userProvider.isLoggedIn && userProvider.user?.email != 'guest@example.com') {
+      Navigator.of(context).pushReplacementNamed('/home');
+    } else {
+      // Вместо экрана приветствия сразу показываем экран регистрации
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const RegisterScreen(),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.deepOrange.shade400,
+              Colors.deepOrange.shade700,
+            ],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.fastfood,
+                size: 80.0,
+                color: Colors.white,
+              ),
+              const SizedBox(height: 24.0),
+              const Text(
+                'Доставка еды',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24.0,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 48.0),
+              const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
