@@ -3,6 +3,7 @@ import '../models/food.dart';
 import '../models/food_item.dart' as food_item;
 import '../widgets/safe_image.dart';
 import '../models/food_adapter.dart';
+import '../config/app_config.dart';
 
 class MinimalistFoodCard extends StatelessWidget {
   final dynamic food; // Может быть Food или FoodItem
@@ -176,7 +177,7 @@ class MinimalistFoodCard extends StatelessWidget {
                         
                         // Цена
                         Text(
-                          '${price.toInt()} ₸',
+                          AppConfig.formatPrice(price),
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,

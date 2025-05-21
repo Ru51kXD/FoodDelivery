@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../models/food_item.dart';
 import 'safe_image.dart';
+import '../config/app_config.dart';
 
 class ProductImageShowcase extends StatelessWidget {
   final String imageUrl;
@@ -128,7 +129,7 @@ class ProductImageShowcase extends StatelessWidget {
               ],
             ),
             child: Text(
-              '${price.toStringAsFixed(0)} ₸',
+              AppConfig.formatPrice(price),
               style: GoogleFonts.poppins(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,

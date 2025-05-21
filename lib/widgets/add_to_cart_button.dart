@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../config/app_config.dart';
 
 class AddToCartButton extends StatefulWidget {
   final String itemName;
@@ -87,7 +88,7 @@ class _AddToCartButtonState extends State<AddToCartButton> with SingleTickerProv
                   ),
                 ),
                 Text(
-                  '${widget.price.toStringAsFixed(0)} ₸/шт',
+                  '${AppConfig.formatPrice(widget.price)}/шт',
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -207,7 +208,7 @@ class _AddToCartButtonState extends State<AddToCartButton> with SingleTickerProv
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        'Добавить ${(widget.price * widget.quantity).toStringAsFixed(0)} ₸',
+                                        'Добавить ${AppConfig.formatPrice(widget.price * widget.quantity)}',
                                         style: GoogleFonts.poppins(
                                           color: Colors.white,
                                           fontSize: 16,

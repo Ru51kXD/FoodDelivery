@@ -7,6 +7,7 @@ import '../models/food_item.dart';
 import '../providers/cart_provider.dart';
 import '../screens/food_details_screen.dart';
 import '../widgets/safe_image.dart';
+import '../config/app_config.dart';
 
 class FoodCard extends StatelessWidget {
   final FoodItem foodItem;
@@ -125,7 +126,7 @@ class FoodCard extends StatelessWidget {
                       ),
                     Expanded(
                       child: Text(
-                        '${_safeIntPrice(foodItem.price)} ₸',
+                        AppConfig.formatPrice(foodItem.price),
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -141,14 +142,6 @@ class FoodCard extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  // Безопасное преобразование цены в целое число
-  int _safeIntPrice(double price) {
-    if (price.isNaN || price.isInfinite) {
-      return 0;
-    }
-    return price.toInt();
   }
 
   Widget _buildGridCard(BuildContext context) {
@@ -263,7 +256,7 @@ class FoodCard extends StatelessWidget {
                         ],
                       ),
                       Text(
-                        '${_safeIntPrice(foodItem.price)} ₸',
+                        AppConfig.formatPrice(foodItem.price),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

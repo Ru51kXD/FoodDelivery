@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
 import '../providers/user_provider.dart';
 import '../models/user.dart';
+import '../config/app_config.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -235,21 +236,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     orderNumber: "1234",
                     date: "12.06.2023",
                     status: "Доставлен",
-                    amount: "1 250 ₸",
+                    amount: AppConfig.formatCurrency(1250),
                     statusColor: Colors.green,
                   ),
                   _buildOrderItem(
                     orderNumber: "1233",
                     date: "05.06.2023",
                     status: "Доставлен",
-                    amount: "990 ₸",
+                    amount: AppConfig.formatCurrency(990),
                     statusColor: Colors.green,
                   ),
                   _buildOrderItem(
                     orderNumber: "1232",
                     date: "01.06.2023",
                     status: "Доставлен",
-                    amount: "1 550 ₸",
+                    amount: AppConfig.formatCurrency(1550),
                     statusColor: Colors.green,
                   ),
                   Center(

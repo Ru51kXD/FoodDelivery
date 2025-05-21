@@ -9,6 +9,8 @@ import '../providers/food_provider.dart';
 import '../models/cart_item.dart';
 import 'checkout_screen.dart';
 import 'home_screen.dart';
+import '../models/food.dart';
+import '../config/app_config.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -221,13 +223,13 @@ class CartScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _buildSummaryItem('Сумма заказа', '${cartProvider.totalPrice.toStringAsFixed(0)} ₸', false),
-                _buildSummaryItem('Доставка', '150 ₸', false),
-                _buildSummaryItem('Сервисный сбор', '50 ₸', false),
+                _buildSummaryItem('Сумма заказа', AppConfig.formatCurrency(cartProvider.totalPrice), false),
+                _buildSummaryItem('Доставка', AppConfig.formatCurrency(150), false),
+                _buildSummaryItem('Сервисный сбор', AppConfig.formatCurrency(50), false),
                 const SizedBox(height: 8),
                 const Divider(thickness: 1),
                 const SizedBox(height: 8),
-                _buildSummaryItem('Итого', '${(cartProvider.totalPrice + 200).toStringAsFixed(0)} ₸', true),
+                _buildSummaryItem('Итого', AppConfig.formatCurrency(cartProvider.totalPrice + 200), true),
                 const SizedBox(height: 100), // Отступ для нижней панели
               ],
             ),
@@ -606,7 +608,7 @@ class CartScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${(cartProvider.totalPrice + 200).toStringAsFixed(0)} ₸',
+                  AppConfig.formatCurrency(cartProvider.totalPrice + 200),
                   style: GoogleFonts.poppins(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,

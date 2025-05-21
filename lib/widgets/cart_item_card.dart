@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../models/cart_item.dart';
+import '../config/app_config.dart';
 
 class CartItemCard extends StatefulWidget {
   final CartItem cartItem;
@@ -145,7 +146,7 @@ class _CartItemCardState extends State<CartItemCard> with SingleTickerProviderSt
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              '${widget.cartItem.food.price.toStringAsFixed(0)} ₸',
+                              AppConfig.formatPrice(widget.cartItem.food.price),
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
                                 color: Colors.deepOrange,
@@ -155,7 +156,7 @@ class _CartItemCardState extends State<CartItemCard> with SingleTickerProviderSt
                           ),
                           
                           // Дополнительные опции
-                          if (widget.cartItem.additionalOptions.isNotEmpty) ...[
+                          if (widget.cartItem.selectedOptions != null && widget.cartItem.selectedOptions!.isNotEmpty) ...[
                             const SizedBox(height: 8),
                             Row(
                               children: [
@@ -167,7 +168,7 @@ class _CartItemCardState extends State<CartItemCard> with SingleTickerProviderSt
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
-                                    'Опции: ${widget.cartItem.additionalOptions.join(", ")}',
+                                    'Опции: ${widget.cartItem.selectedOptions!.map((o) => o.name).join(", ")}',
                                     style: GoogleFonts.poppins(
                                       fontSize: 12,
                                       color: Colors.grey[600],
@@ -291,7 +292,7 @@ class _CartItemCardState extends State<CartItemCard> with SingleTickerProviderSt
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            '${widget.cartItem.totalPrice.toStringAsFixed(0)} ₸',
+                            AppConfig.formatPrice(widget.cartItem.totalPrice),
                             style: GoogleFonts.poppins(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,

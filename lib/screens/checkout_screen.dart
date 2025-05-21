@@ -9,6 +9,7 @@ import '../widgets/promo_code_input.dart';
 import 'order_success_screen.dart';
 import '../models/delivery_time_slot.dart';
 import 'package:intl/intl.dart';
+import '../config/app_config.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -24,7 +25,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _nameController = TextEditingController();
   final _loyaltyService = LoyaltyService();
   final _commentController = TextEditingController();
-  final _promoController = TextEditingController();
   
   String _selectedPaymentMethod = 'Наличные';
   bool _isProcessing = false;
@@ -36,8 +36,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   DateTime? _scheduledDate;
   TimeOfDay? _scheduledTime;
   DeliveryTimeSlot? _selectedTimeSlot;
-  bool _isPromoValid = false;
-  double _promoDiscount = 0.0;
   
   // Доступные временные слоты доставки
   final List<DeliveryTimeSlot> _timeSlots = [
@@ -108,7 +106,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _phoneController.dispose();
     _nameController.dispose();
     _commentController.dispose();
-    _promoController.dispose();
     super.dispose();
   }
 
@@ -174,7 +171,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       discount += _appliedPromoCode!.calculateDiscount(_getSubtotal());
     }
     
-    // Скидка по бонусным баллам (1 балл = 1 рубль)
+    // Скидка по бонусным баллам (1 балл = 1 тенге)
     if (_useLoyaltyPoints && _pointsToUse > 0) {
       discount += _pointsToUse.toDouble();
     }
@@ -197,37 +194,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   double _getTotal() {
     return _getSubtotal() + _getDeliveryFee() + _getServiceFee() - _calculateDiscount();
-  }
-
-  // Проверка промокода
-  void _checkPromoCode() {
-    final promoCode = _promoController.text.trim().toUpperCase();
-    
-    if (_promoCodes.containsKey(promoCode)) {
-      setState(() {
-        _isPromoValid = true;
-        _promoDiscount = _promoCodes[promoCode]!;
-      });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Промокод применен! Скидка: $_promoDiscount%'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } else {
-      setState(() {
-        _isPromoValid = false;
-        _promoDiscount = 0.0;
-      });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Недействительный промокод'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
   
   // Выбор даты доставки
@@ -284,8 +250,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final deliveryFee = 99.0;
     double total = subtotal + deliveryFee;
     
-    if (_isPromoValid) {
-      final discount = total * (_promoDiscount / 100);
+    if (_appliedPromoCode != null) {
+      final discount = _appliedPromoCode!.calculateDiscount(subtotal);
       total -= discount;
     }
     
@@ -425,64 +391,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                   const SizedBox(height: 24),
                   
-                  // Способ оплаты
-                  Text(
-                    'Способ оплаты',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Выбор способа оплаты
-                  _buildPaymentMethodSelector(),
-                  const SizedBox(height: 24),
-                  
-                  // Промокод
-                  PromoCodeInput(
-                    orderAmount: _getSubtotal(),
-                    onPromoCodeApplied: _handlePromoCodeApplied,
-                    onError: _handlePromoCodeError,
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Бонусные баллы
-                  if (_availablePoints > 0) _buildLoyaltyPointsSection(),
-                  const SizedBox(height: 24),
-                  
-                  // Информация о заказе
-                  Text(
-                    'Информация о заказе',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Итоговая информация
-                  _buildOrderInfoItem('Товары (${cartProvider.itemCount})', '${_getSubtotal().toStringAsFixed(0)} ₸'),
-                  _buildOrderInfoItem('Доставка', '${_getDeliveryFee().toStringAsFixed(0)} ₸'),
-                  _buildOrderInfoItem('Сервисный сбор', '${_getServiceFee().toStringAsFixed(0)} ₸'),
-                  
-                  // Скидки
-                  if (_calculateDiscount() > 0) ...[
-                    _buildOrderInfoItem(
-                      'Скидка',
-                      '-${_calculateDiscount().toStringAsFixed(0)} ₸',
-                      isDiscount: true,
-                    ),
-                  ],
-                  
-                  const Divider(height: 32),
-                  _buildOrderInfoItem(
-                    'Итого',
-                    '${_getTotal().toStringAsFixed(0)} ₸',
-                    isBold: true,
-                  ),
-                  const SizedBox(height: 40),
-                  
                   // Время доставки
                   _buildSectionTitle('Время доставки'),
                   SwitchListTile(
@@ -573,40 +481,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   
                   // Промокод
                   _buildSectionTitle('Промокод'),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _promoController,
-                          decoration: InputDecoration(
-                            hintText: 'Введите промокод',
-                            filled: true,
-                            fillColor: Colors.grey[100],
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                            suffixIcon: _isPromoValid
-                                ? const Icon(Icons.check_circle, color: Colors.green)
-                                : null,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      ElevatedButton(
-                        onPressed: _checkPromoCode,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepOrange,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: Text(
-                          'Применить',
-                          style: GoogleFonts.poppins(),
-                        ),
-                      ),
-                    ],
+                  PromoCodeInput(
+                    orderAmount: _getSubtotal(),
+                    onPromoCodeApplied: _handlePromoCodeApplied,
+                    onError: _handlePromoCodeError,
                   ),
                   
+                  const SizedBox(height: 24),
+                  
+                  // Бонусные баллы
+                  if (_availablePoints > 0) _buildLoyaltyPointsSection(),
                   const SizedBox(height: 24),
                   
                   // Комментарий к заказу
@@ -636,18 +520,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                     child: Column(
                       children: [
-                        _buildPriceRow('Сумма заказа', '${subtotal.toStringAsFixed(0)} ₸'),
-                        _buildPriceRow('Доставка', '99 ₸'),
-                        if (_isPromoValid)
+                        _buildPriceRow('Сумма заказа', AppConfig.formatCurrency(_getSubtotal()), valueColor: Colors.black),
+                        _buildPriceRow('Доставка', AppConfig.formatCurrency(_getDeliveryFee()), valueColor: Colors.black),
+                        
+                        if (_calculateDiscount() > 0) ...[
                           _buildPriceRow(
                             'Скидка',
-                            '- ${((subtotal + 99) * _promoDiscount / 100).toStringAsFixed(0)} ₸',
+                            '- ${AppConfig.formatCurrency(_calculateDiscount())}',
                             valueColor: Colors.green,
                           ),
+                        ],
+                        
                         const Divider(),
                         _buildPriceRow(
                           'Итого',
-                          '${total.toStringAsFixed(0)} ₸',
+                          AppConfig.formatCurrency(_getTotal()),
                           isBold: true,
                         ),
                       ],
